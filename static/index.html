@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Clipboard Sync • Win ⇄ Mac</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- AMBIENT BACKGROUND GLOWS -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div class="app-layout">
+        <!-- TOP HEADER -->
+        <header class="app-header">
+            <div class="brand-group">
+                <div class="brand-logo">
+                    <div class="logo-core">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1.5" ry="1.5"></rect>
+                            <path d="M12 11h4"></path>
+                            <path d="M12 16h4"></path>
+                            <path d="M8 11h.01"></path>
+                            <path d="M8 16h.01"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-title-row">
+                        <h1 class="brand-title">Universal Clipboard</h1>
+                        <span class="version-tag">P2P v1.0</span>
+                    </div>
+                    <p class="brand-desc">Zero-Latency Wi-Fi Bridge between Windows 10 & MacBook</p>
+                </div>
+            </div>
+
+            <!-- NETWORK STATUS PILLS -->
+            <div class="header-status-group">
+                <div class="telemetry-item">
+                    <span class="telemetry-dot"></span>
+                    <span class="telemetry-label">Lokální uzel:</span>
+                    <strong class="telemetry-value" id="localDeviceName">Detekuji...</strong>
+                </div>
+
+                <div class="network-badge" id="peersBadge">
+                    <span class="radar-ping" id="peersIndicator"></span>
+                    <span class="network-status-text" id="peersStatusText">Hledám zařízení na Wi-Fi...</span>
+                </div>
+
+                <button id="shutdownBtn" class="shutdown-btn" title="Ukončit aplikaci a synchronizační server">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                        <line x1="12" y1="2" x2="12" y2="12"></line>
+                    </svg>
+                    <span>Ukončit</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN WORKSPACE -->
+        <main class="workspace-grid">
+            
+            <!-- LEFT COLUMN: SENDER & CONTROLS -->
+            <div class="column sender-column">
+                
+                <!-- CARD: DRAG & DROP / QUICK SHARE -->
+                <div class="glass-card sender-card">
+                    <div class="card-topbar">
+                        <div class="card-title-wrap">
+                            <span class="icon-chip">⚡</span>
+                            <h2>Odeslat do Schránky</h2>
+                        </div>
+                        <span class="micro-badge auto-badge">Auto Sync On</span>
+                    </div>
+
+                    <!-- DROPZONE -->
+                    <div class="dropzone" id="dropzone">
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                        <div class="dropzone-inner">
+                            <div class="drop-illustration">
+                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                                    <path d="M12 12v9"></path>
+                                    <path d="m8 17 4 4 4-4"></path>
+                                </svg>
+                            </div>
+                            <div class="drop-texts">
+                                <h3 class="drop-title">Přetáhni sem obrázek nebo screenshot</h3>
+                                <p class="drop-subtitle">nebo <button type="button" class="link-action" id="browseBtn">vyber soubor</button> • Podporuje i přímé <kbd>Ctrl+V</kbd></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TEXT & CODE EDITOR -->
+                    <div class="editor-block">
+                        <div class="editor-header">
+                            <span class="editor-label">Text, URL nebo Kód</span>
+                            <span class="char-count" id="charCounter">0 znaků</span>
+                        </div>
+                        <div class="textarea-wrapper">
+                            <textarea id="manualTextInput" placeholder="Napiš nebo vlož delší text, JSON, prompt nebo kód..." rows="5" spellcheck="false"></textarea>
+                        </div>
+                        <div class="editor-footer">
+                            <span class="footer-tip">Stiskni <kbd>Ctrl</kbd> + <kbd>Enter</kbd> pro odeslání</span>
+                            <button id="sendTextBtn" class="primary-action-btn">
+                                <span>Odeslat do všech zařízení</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD: ACTIVE NETWORK NODES -->
+                <div class="glass-card peers-card">
+                    <div class="card-topbar">
+                        <div class="card-title-wrap">
+                            <span class="icon-chip">📡</span>
+                            <h3>Připojená Zařízení (<span id="activePeersCount">0</span>)</h3>
+                        </div>
+                        <span class="security-tag">🔒 Šifrovaná LAN</span>
+                    </div>
+                    <div class="peers-list" id="peersContainer">
+                        <div class="empty-peers-notice">
+                            <span class="empty-peers-icon">🔍</span>
+                            <p>Čekám na spuštění na MacBooku... Zařízení se na stejné Wi-Fi propojí automaticky.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: LIVE CLIPBOARD FEED -->
+            <div class="column feed-column">
+                <div class="glass-card feed-card">
+                    <div class="feed-header">
+                        <div class="card-title-wrap">
+                            <span class="icon-chip">🕒</span>
+                            <h2>Historie Schránky</h2>
+                        </div>
+                        <div class="filter-pills">
+                            <button class="pill-btn active" data-filter="all">Vše</button>
+                            <button class="pill-btn" data-filter="text">Text & Kód</button>
+                            <button class="pill-btn" data-filter="image">Obrázky</button>
+                        </div>
+                    </div>
+
+                    <div class="feed-scroll-container" id="historyFeed">
+                        <!-- Injected via JS -->
+                        <div class="feed-empty-state">
+                            <div class="empty-halo">📋</div>
+                            <h3>Schránka je připravena</h3>
+                            <p>Zkopíruj cokoliv (<kbd>Ctrl+C</kbd> na Win / <kbd>Cmd+C</kbd> na Macu) a obsah se okamžitě objeví zde i na druhém zařízení.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toastContainer" class="toast-stack"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
