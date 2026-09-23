@@ -89,7 +89,8 @@ function handleWsEvent(data) {
         if (historyItems.length > 50) historyItems.pop();
         renderHistory();
         if (data.from_remote) {
-            showToast(`Příchozí ${item.type === 'text' ? 'text' : 'obrázek'} z druhého zařízení synchronizován!`, 'success');
+            const kind = item.type === 'text' ? 'text' : (item.type === 'file' ? 'seznam souborů' : 'obrázek');
+            showToast(`Příchozí ${kind} z druhého zařízení synchronizován!`, 'success');
         }
     }
 }
@@ -180,6 +181,31 @@ function renderHistory() {
                     <pre class="history-content-text">${previewText}</pre>
                 </div>
             `;
+        } else if (item.type === 'file') {
+            const files = (item.metadata || {}).files || [];
+            const rows = files.map(f => `
+                <li class="file-row">
+                    <span class="file-icon">${f.is_dir ? '📁' : '📄'}</span>
+                    <span class="file-name">${escapeHtml(f.name)}</span>
+                    <span class="file-size">${f.is_dir ? 'složka' : formatBytes(f.size_bytes)}</span>
+                    <span class="file-path">${escapeHtml(f.path)}</span>
+                </li>
+            `).join('');
+            return `
+                <div class="history-card" data-hash="${item.hash}">
+                    <div class="history-card-top">
+                        <div class="history-meta-tags">
+                            <span class="type-pill file">Soubory (${files.length})</span>
+                            <span class="time-stamp">${timeStr}</span>
+                        </div>
+                        <button class="copy-action-btn" onclick="copyTextItem('${item.hash}', this)">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Kopírovat cesty</span>
+                        </button>
+                    </div>
+                    <ul class="history-file-list">${rows}</ul>
+                </div>
+            `;
         } else if (item.type === 'image') {
             const meta = item.metadata || {};
             const metaText = meta.width ? `${meta.width} × ${meta.height} px • ${(meta.size_bytes / 1024).toFixed(1)} KB` : 'Obrázek';
@@ -216,6 +242,15 @@ function formatTimestamp(ts) {
     if (!ts) return '';
     const d = new Date(ts * 1000);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatBytes(bytes) {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let v = bytes;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
 function escapeHtml(str) {

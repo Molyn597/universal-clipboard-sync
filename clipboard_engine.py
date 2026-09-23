@@ -27,8 +27,9 @@ if IS_WINDOWS:
 class ClipboardItem:
     def __init__(self, item_type: str, data: str, metadata: Optional[Dict[str, Any]] = None):
         """
-        item_type: 'text' | 'image'
-        data: UTF-8 string for text, or base64 encoded PNG for image
+        item_type: 'text' | 'image' | 'file'
+        data: UTF-8 string for text, base64 encoded PNG for image,
+              newline-separated absolute paths for file
         """
         self.item_type = item_type
         self.data = data
@@ -79,16 +80,33 @@ class ClipboardEngine:
     def is_hash_seen(self, item_hash: str) -> bool:
         return item_hash in self.recent_hashes
 
+    # ----------------- WINDOWS CLIPBOARD ACCESS -----------------
+    @staticmethod
+    def _open_clipboard_retry(attempts: int = 5, delay: float = 0.02) -> bool:
+        """Windows allows one owner at a time; Explorer/Office briefly lock it after Ctrl+C."""
+        for i in range(attempts):
+            try:
+                win32clipboard.OpenClipboard()
+                return True
+            except Exception:
+                time.sleep(delay * (i + 1))
+        return False
+
     # ----------------- READING CLIPBOARD -----------------
     def read_local_clipboard(self) -> Optional[ClipboardItem]:
         """Reads current clipboard (text or image/GIF) and returns ClipboardItem if changed."""
         try:
-            # 1. Read Image/Screenshot/GIF from clipboard (In-Memory)
+            # 1. Read copied files/folders (CF_HDROP on Windows, file URLs on macOS)
+            file_item = self._read_files_native()
+            if file_item:
+                return file_item
+
+            # 2. Read Image/Screenshot/GIF from clipboard (In-Memory)
             img_item = self._read_image_native()
             if img_item:
                 return img_item
 
-            # 2. Read Text/Code from clipboard
+            # 3. Read Text/Code from clipboard
             text_data = self._read_text_native()
             if text_data and len(text_data.strip()) > 0:
                 item = ClipboardItem(
@@ -101,6 +119,54 @@ class ClipboardEngine:
         except Exception as e:
             logger.debug(f"Error reading clipboard: {e}")
         return None
+
+    def _read_files_native(self) -> Optional[ClipboardItem]:
+        paths: List[str] = []
+        if IS_WINDOWS and win32clipboard:
+            if not self._open_clipboard_retry():
+                return None
+            try:
+                if win32clipboard.IsClipboardFormatAvailable(win32con.CF_HDROP):
+                    paths = [str(p) for p in win32clipboard.GetClipboardData(win32con.CF_HDROP)]
+            except Exception as e:
+                logger.debug(f"CF_HDROP read failed: {e}")
+            finally:
+                try:
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    pass
+        elif IS_MACOS:
+            try:
+                script = 'try\nset f to the clipboard as «class furl»\nreturn POSIX path of f\nend try'
+                p = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+                out = p.stdout.strip()
+                if out:
+                    paths = [line for line in out.splitlines() if line]
+            except Exception:
+                pass
+
+        if not paths:
+            return None
+
+        entries = []
+        for path in paths:
+            try:
+                is_dir = os.path.isdir(path)
+                size = 0 if is_dir else os.path.getsize(path)
+            except OSError:
+                is_dir, size = False, 0
+            entries.append({
+                "path": path,
+                "name": os.path.basename(path.rstrip("\\/")) or path,
+                "is_dir": is_dir,
+                "size_bytes": size,
+            })
+
+        return ClipboardItem(
+            item_type="file",
+            data="\n".join(paths),
+            metadata={"files": entries, "count": len(entries)},
+        )
 
     def _read_image_native(self) -> Optional[ClipboardItem]:
         if IS_WINDOWS:
@@ -155,14 +221,14 @@ class ClipboardEngine:
 
     def _read_text_native(self) -> Optional[str]:
         if IS_WINDOWS and win32clipboard:
+            if not self._open_clipboard_retry():
+                return None
             try:
-                win32clipboard.OpenClipboard()
                 if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
-                    data = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-                    win32clipboard.CloseClipboard()
-                    return data
-                win32clipboard.CloseClipboard()
-            except Exception:
+                    return win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
+            except Exception as e:
+                logger.debug(f"CF_UNICODETEXT read failed: {e}")
+            finally:
                 try:
                     win32clipboard.CloseClipboard()
                 except Exception:
@@ -186,12 +252,16 @@ class ClipboardEngine:
             return self._write_text_native(item.data)
         elif item.item_type == "image":
             return self._write_image_native(item.data)
+        elif item.item_type == "file":
+            # Remote paths are not valid on this machine; expose them as text instead.
+            return self._write_text_native(item.data)
         return False
 
     def _write_text_native(self, text: str) -> bool:
         if IS_WINDOWS and win32clipboard:
+            if not self._open_clipboard_retry():
+                return False
             try:
-                win32clipboard.OpenClipboard()
                 win32clipboard.EmptyClipboard()
                 win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, text)
                 win32clipboard.CloseClipboard()
@@ -225,7 +295,8 @@ class ClipboardEngine:
                 data = output.getvalue()[14:]  # Strip standard 14-byte BMP header for CF_DIB
                 output.close()
 
-                win32clipboard.OpenClipboard()
+                if not self._open_clipboard_retry():
+                    return False
                 win32clipboard.EmptyClipboard()
                 win32clipboard.SetClipboardData(win32con.CF_DIB, data)
                 win32clipboard.CloseClipboard()
