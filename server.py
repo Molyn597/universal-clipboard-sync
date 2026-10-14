@@ -7,6 +7,7 @@ import time
 import asyncio
 import logging
 from aiohttp import web
+from cryptography.fernet import InvalidToken
 from PIL import Image
 
 from clipboard_engine import ClipboardEngine, ClipboardItem
@@ -25,12 +26,17 @@ logger = logging.getLogger("ClipboardServer")
 
 DEFAULT_PORT = 7890
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+LOOPBACK = {"127.0.0.1", "::1"}
+PEER_ROUTES = {"/api/ping", "/api/sync"}  # the only endpoints reachable from other devices
 
 
 class ClipboardServer:
     def __init__(self, port: int = DEFAULT_PORT):
         self.port = port
-        self.app = web.Application(client_max_size=50 * 1024 * 1024)  # 50MB max for big screenshots/images
+        self.app = web.Application(
+            client_max_size=50 * 1024 * 1024,  # 50MB max for big screenshots/images
+            middlewares=[self._access_guard],
+        )
         self.engine = ClipboardEngine()
         self.p2p = P2PManager(local_http_port=self.port, on_peer_change=self._on_peers_updated)
         self.ws_clients = set()
@@ -47,6 +53,25 @@ class ClipboardServer:
         self.app.router.add_get("/api/status", self.handle_api_status)
         self.app.router.add_get("/api/history", self.handle_api_history)
         self.app.router.add_static("/static/", STATIC_DIR, name="static")
+
+    @web.middleware
+    async def _access_guard(self, request: web.Request, handler):
+        """Dashboard/API is localhost-only; LAN peers may only reach the sealed peer endpoints.
+        The Origin check stops other websites open in the local browser from using the API."""
+        if request.remote not in LOOPBACK:
+            if request.path not in PEER_ROUTES:
+                raise web.HTTPForbidden()
+        else:
+            origin = request.headers.get("Origin")
+            if origin and origin not in (f"http://localhost:{self.port}", f"http://127.0.0.1:{self.port}"):
+                raise web.HTTPForbidden()
+        return await handler(request)
+
+    async def _read_payload(self, request: web.Request) -> dict:
+        """Plain JSON is accepted only from the local dashboard; everything else must be sealed."""
+        if request.remote in LOOPBACK and request.content_type == "application/json":
+            return await request.json()
+        return self.p2p.unseal(await request.read())
 
     async def handle_index(self, request: web.Request):
         index_path = os.path.join(STATIC_DIR, "index.html")
@@ -130,7 +155,7 @@ class ClipboardServer:
     async def handle_api_ping(self, request: web.Request):
         """Direct unicast handshake from a remote peer."""
         try:
-            data = await request.json()
+            data = self.p2p.unseal(await request.read())
             node_id = data.get("id")
             name = data.get("name", "Unknown")
             port = data.get("port", 7890)
@@ -147,13 +172,15 @@ class ClipboardServer:
                     "port": self.port,
                 })
             return web.json_response({"status": "ignored"})
+        except InvalidToken:
+            return web.json_response({"status": "error", "message": "Invalid pairing key"}, status=403)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=400)
 
     async def handle_api_sync(self, request: web.Request):
         """Endpoint called by remote peer or UI."""
         try:
-            data = await request.json()
+            data = await self._read_payload(request)
             item = ClipboardItem.from_dict(data)
             if not self.engine.is_hash_seen(item.hash):
                 self.engine.mark_hash_seen(item.hash)
@@ -161,6 +188,9 @@ class ClipboardServer:
                 return web.json_response({"status": "ok", "hash": item.hash})
             else:
                 return web.json_response({"status": "already_seen", "hash": item.hash})
+        except InvalidToken:
+            logger.warning(f"Rejected sync from {request.remote}: invalid pairing key")
+            return web.json_response({"status": "error", "message": "Invalid pairing key"}, status=403)
         except Exception as e:
             logger.error(f"Sync endpoint error: {e}")
             return web.json_response({"status": "error", "message": str(e)}, status=400)

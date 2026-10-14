@@ -18,7 +18,7 @@ EOF
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
-./venv/bin/pip install --quiet aiohttp Pillow
+./venv/bin/pip install --quiet aiohttp Pillow cryptography
 
 # 3. Kompilace nativni Apple Silicon aplikace
 osacompile -o "/Applications/Universal Clipboard.app" -e 'set p to POSIX path of (path to home folder) & "AI_Workspace/clipboard_sync"

@@ -12,3 +12,6 @@ __pycache__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Pairing secret (copy manually between your devices, never commit)
+sync.key

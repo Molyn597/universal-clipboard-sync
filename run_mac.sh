@@ -10,7 +10,7 @@ echo "========================================================"
 echo ""
 
 echo "[1/2] Kontroluji závislosti..."
-pip3 install --quiet aiohttp Pillow 2>/dev/null || pip install --quiet aiohttp Pillow
+pip3 install --quiet aiohttp Pillow cryptography 2>/dev/null || pip install --quiet aiohttp Pillow cryptography
 
 echo "[2/2] Spouštím synchronizační službu..."
 echo ""

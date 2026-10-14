@@ -1,4 +1,8 @@
 import asyncio
+import base64
+import hashlib
+import os
+import secrets
 import socket
 import json
 import uuid
@@ -6,6 +10,7 @@ import time
 import platform
 import logging
 import aiohttp
+from cryptography.fernet import Fernet, InvalidToken
 from typing import Dict, List, Callable, Optional, Set
 
 logger = logging.getLogger("P2PSync")
@@ -13,6 +18,25 @@ logger = logging.getLogger("P2PSync")
 DISCOVERY_PORT = 45678
 BROADCAST_INTERVAL = 2.0
 PEER_TIMEOUT = 8.0
+MESSAGE_TTL = 120  # seconds; sealed messages older than this are rejected (replay protection)
+KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync.key")
+
+
+def load_sync_key() -> str:
+    """Shared pairing secret: CLIPBOARD_SYNC_KEY env var, else sync.key (generated on first run)."""
+    key = os.environ.get("CLIPBOARD_SYNC_KEY", "").strip()
+    if key:
+        return key
+    if os.path.exists(KEY_FILE):
+        with open(KEY_FILE, encoding="utf-8") as f:
+            key = f.read().strip()
+        if key:
+            return key
+    key = secrets.token_urlsafe(32)
+    with open(KEY_FILE, "w", encoding="utf-8") as f:
+        f.write(key + "\n")
+    logger.warning(f"Generated new pairing key {KEY_FILE} - copy this file to every device you want to sync with.")
+    return key
 
 
 def get_local_broadcast_ips() -> List[str]:
@@ -72,7 +96,7 @@ class UDPDiscoveryProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple):
         try:
-            msg = json.loads(data.decode("utf-8"))
+            msg = self.manager.unseal(data)
             if msg.get("app") != "hermes-clip-sync":
                 return
             sender_id = msg.get("id")
@@ -85,6 +109,8 @@ class UDPDiscoveryProtocol(asyncio.DatagramProtocol):
             system = msg.get("system", "unknown")
 
             self.manager.handle_peer_beacon(sender_id, name, host, port, system)
+        except InvalidToken:
+            logger.debug(f"Ignoring beacon from {addr[0]} with a different pairing key")
         except Exception as e:
             logger.debug(f"Discovery packet error: {e}")
 
@@ -101,6 +127,16 @@ class P2PManager:
         self._udp_transport: Optional[asyncio.DatagramTransport] = None
         self._session: Optional[aiohttp.ClientSession] = None
         self._broadcast_targets = get_local_broadcast_ips()
+        secret = hashlib.sha256(load_sync_key().encode("utf-8")).digest()
+        self._fernet = Fernet(base64.urlsafe_b64encode(secret))
+
+    def seal(self, payload: dict) -> bytes:
+        """Encrypts + authenticates a message for peers sharing the same pairing key."""
+        return self._fernet.encrypt(json.dumps(payload).encode("utf-8"))
+
+    def unseal(self, token: bytes) -> dict:
+        """Raises InvalidToken if the message was not sealed with our key or is expired."""
+        return json.loads(self._fernet.decrypt(token, ttl=MESSAGE_TTL))
 
     def handle_peer_beacon(self, node_id: str, name: str, host: str, port: int, system: str):
         is_new = node_id not in self.peers
@@ -136,7 +172,7 @@ class P2PManager:
             "port": self.local_http_port,
         }
         try:
-            async with self._session.post(f"{peer.url}/api/ping", json=payload) as resp:
+            async with self._session.post(f"{peer.url}/api/ping", data=self.seal(payload)) as resp:
                 if resp.status == 200:
                     logger.info(f"Mutual handshake confirmed with {peer.name}")
         except Exception as e:
@@ -182,17 +218,18 @@ class P2PManager:
 
     async def _beacon_loop(self):
         """Broadcasts identity packet to all detected LAN broadcast targets."""
-        beacon_data = json.dumps({
+        beacon = {
             "app": "hermes-clip-sync",
             "id": self.node_id,
             "name": self.hostname,
             "system": self.system,
             "port": self.local_http_port,
-        }).encode("utf-8")
+        }
 
         while self._running:
             try:
                 if self._udp_transport:
+                    beacon_data = self.seal(beacon)  # re-sealed each round so the timestamp stays fresh
                     for target in self._broadcast_targets:
                         try:
                             self._udp_transport.sendto(beacon_data, (target, DISCOVERY_PORT))
@@ -231,7 +268,7 @@ class P2PManager:
             return
         target_url = f"{peer.url}/api/sync"
         try:
-            async with self._session.post(target_url, json=payload) as resp:
+            async with self._session.post(target_url, data=self.seal(payload)) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully synced item {payload.get('hash', '')[:8]} to {peer.name}")
                 else:
