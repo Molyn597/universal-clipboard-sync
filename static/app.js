@@ -77,6 +77,9 @@ function handleWsEvent(data) {
         updateHeaderStatus();
         updatePeersList();
         renderHistory();
+        renderUpdate(data.update);
+    } else if (data.event === 'update_status') {
+        renderUpdate(data.update);
     } else if (data.event === 'peers_updated') {
         activePeers = data.peers || [];
         updateHeaderStatus();
@@ -466,6 +469,111 @@ if (shutdownBtn) {
         }, 500);
     });
 }
+
+// ==========================================
+// UPDATES
+// ==========================================
+const versionTag = document.getElementById('versionTag');
+const updateBanner = document.getElementById('updateBanner');
+const updateBannerText = document.getElementById('updateBannerText');
+const updateBtn = document.getElementById('updateBtn');
+const updateProgress = document.getElementById('updateProgress');
+const updateProgressBar = document.getElementById('updateProgressBar');
+let updateInfo = null;
+
+function renderUpdate(update) {
+    if (!update) return;
+    updateInfo = update;
+    versionTag.textContent = `v${update.current}`;
+    updateBanner.hidden = !update.available;
+    if (!update.available) return;
+
+    const busy = update.state === 'downloading' || update.state === 'installing';
+    updateProgress.hidden = !busy;
+    updateBtn.hidden = busy;
+    updateProgressBar.style.width = `${Math.round(update.progress * 100)}%`;
+
+    if (update.state === 'downloading') {
+        updateBannerText.textContent = `Stahuji verzi ${update.latest}... ${Math.round(update.progress * 100)} %`;
+    } else if (update.state === 'installing') {
+        updateBannerText.textContent = `Instaluji verzi ${update.latest}, aplikace se za chvíli znovu spustí...`;
+    } else if (update.state === 'error') {
+        updateBannerText.textContent = `Aktualizace se nezdařila: ${update.error}`;
+        updateBtn.textContent = 'Zkusit znovu';
+    } else {
+        updateBannerText.textContent = `Je dostupná nová verze ${update.latest} (máš ${update.current}).`;
+        updateBtn.textContent = update.can_install ? 'Aktualizovat' : 'Stáhnout';
+    }
+}
+
+updateBtn.addEventListener('click', async () => {
+    if (!updateInfo) return;
+    if (!updateInfo.can_install) {
+        fetch('/api/update/open', { method: 'POST' });
+        return;
+    }
+    updateBtn.hidden = true;
+    const res = await fetch('/api/update/install', { method: 'POST' });
+    if (!res.ok) {
+        updateBtn.hidden = false;
+        showToast('Aktualizaci se nepodařilo spustit.', 'error');
+    }
+});
+
+// ==========================================
+// PAIRING
+// ==========================================
+const pairingModal = document.getElementById('pairingModal');
+const ownPairingKey = document.getElementById('ownPairingKey');
+const newPairingKey = document.getElementById('newPairingKey');
+const togglePairingKey = document.getElementById('togglePairingKey');
+
+async function openPairing() {
+    const res = await fetch('/api/pairing');
+    ownPairingKey.value = (await res.json()).key;
+    ownPairingKey.type = 'password';
+    togglePairingKey.textContent = 'Zobrazit';
+    newPairingKey.value = '';
+    pairingModal.hidden = false;
+}
+
+function closePairing() {
+    pairingModal.hidden = true;
+    ownPairingKey.value = '';
+}
+
+document.getElementById('pairingBtn').addEventListener('click', openPairing);
+document.getElementById('pairingClose').addEventListener('click', closePairing);
+pairingModal.addEventListener('click', (e) => { if (e.target === pairingModal) closePairing(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pairingModal.hidden) closePairing(); });
+
+togglePairingKey.addEventListener('click', () => {
+    const show = ownPairingKey.type === 'password';
+    ownPairingKey.type = show ? 'text' : 'password';
+    togglePairingKey.textContent = show ? 'Skrýt' : 'Zobrazit';
+});
+
+document.getElementById('copyPairingKey').addEventListener('click', async () => {
+    await fetch('/api/pairing/copy', { method: 'POST' });
+    showToast('Párovací kód zkopírován. Vlož ho na druhém zařízení.', 'success');
+});
+
+document.getElementById('applyPairingKey').addEventListener('click', async () => {
+    const key = newPairingKey.value.trim();
+    if (!key) return;
+    const res = await fetch('/api/pairing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+    if (res.ok) {
+        closePairing();
+        showToast('Spárováno! Zařízení se do pár sekund objeví v seznamu.', 'success');
+    } else {
+        showToast(`Kód nelze použít: ${data.message}`, 'error');
+    }
+});
 
 // Initialize on load
 connectWebSocket();

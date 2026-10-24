@@ -34,7 +34,7 @@
                 <div class="brand-text">
                     <div class="brand-title-row">
                         <h1 class="brand-title">Universal Clipboard</h1>
-                        <span class="version-tag">P2P v1.0</span>
+                        <span class="version-tag" id="versionTag">v–</span>
                     </div>
                     <p class="brand-desc">Zero-Latency Wi-Fi Bridge between Windows 10 & MacBook</p>
                 </div>
@@ -53,6 +53,15 @@
                     <span class="network-status-text" id="peersStatusText">Hledám zařízení na Wi-Fi...</span>
                 </div>
 
+                <button id="pairingBtn" class="header-btn" title="Spárovat s dalším zařízením">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                        <path d="m21 2-9.6 9.6"></path>
+                        <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+                    </svg>
+                    <span>Párování</span>
+                </button>
+
                 <button id="shutdownBtn" class="shutdown-btn" title="Ukončit aplikaci a synchronizační server">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
@@ -62,6 +71,13 @@
                 </button>
             </div>
         </header>
+
+        <!-- UPDATE BANNER -->
+        <div class="update-banner" id="updateBanner" hidden>
+            <span class="update-banner-text" id="updateBannerText"></span>
+            <div class="update-progress" id="updateProgress" hidden><div class="update-progress-bar" id="updateProgressBar"></div></div>
+            <button class="primary-action-btn" id="updateBtn">Aktualizovat</button>
+        </div>
 
         <!-- MAIN WORKSPACE -->
         <main class="workspace-grid">
@@ -166,6 +182,34 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- PAIRING MODAL -->
+    <div class="modal-backdrop" id="pairingModal" hidden>
+        <div class="glass-card modal-card" role="dialog" aria-labelledby="pairingTitle">
+            <div class="card-topbar">
+                <div class="card-title-wrap">
+                    <span class="icon-chip">🔑</span>
+                    <h2 id="pairingTitle">Párování zařízení</h2>
+                </div>
+                <button class="modal-close" id="pairingClose" aria-label="Zavřít">✕</button>
+            </div>
+            <p class="modal-hint">Zařízení se propojí, když mají stejný párovací kód a jsou na stejné Wi-Fi. Zkopíruj kód z tohoto zařízení a vlož ho na druhém.</p>
+
+            <label class="editor-label" for="ownPairingKey">Kód tohoto zařízení</label>
+            <div class="pairing-row">
+                <input type="password" id="ownPairingKey" class="pairing-input" readonly>
+                <button class="copy-action-btn" id="togglePairingKey">Zobrazit</button>
+                <button class="copy-action-btn" id="copyPairingKey">Kopírovat</button>
+            </div>
+
+            <label class="editor-label" for="newPairingKey">Vložit kód z jiného zařízení</label>
+            <div class="pairing-row">
+                <input type="text" id="newPairingKey" class="pairing-input" placeholder="Vlož párovací kód..." spellcheck="false" autocomplete="off">
+                <button class="primary-action-btn" id="applyPairingKey">Spárovat</button>
+            </div>
+            <p class="modal-hint warn">Kód nikomu neposílej – kdo ho má, může číst tvou schránku.</p>
+        </div>
     </div>
 
     <!-- TOAST NOTIFICATIONS -->

@@ -15,15 +15,10 @@ echo [1/2] Kontroluji zavislosti...
 venv\Scripts\python.exe -m pip install --quiet -r requirements.txt
 set "PY_EXE=venv\Scripts\python.exe"
 
-echo [2/2] Spoustim synchronizacni server...
-echo.
-echo ========================================================
-echo  Dashboard UI: http://localhost:7890
-echo ========================================================
+echo [2/2] Spoustim aplikaci ze zdrojaku (vyvojovy rezim)...
 echo.
 
-start http://localhost:7890
-"%PY_EXE%" server.py 7890
+"%PY_EXE%" main.py
 
 if %errorlevel% neq 0 (
     echo.

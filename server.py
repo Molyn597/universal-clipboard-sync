@@ -5,16 +5,18 @@ import json
 import base64
 import asyncio
 import logging
+import webbrowser
 from aiohttp import web
 from cryptography.fernet import InvalidToken
 from PIL import Image
 
+from typing import Callable, Optional
+
+from app_paths import resource
 from clipboard_engine import ClipboardEngine, ClipboardItem, file_item_from_paths, pack_files, unpack_files
 from p2p_sync import P2PManager
-try:
-    from tray_icon import setup_tray
-except ImportError:
-    setup_tray = None
+from updater import Updater
+from version import __version__
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,14 +26,17 @@ logging.basicConfig(
 logger = logging.getLogger("ClipboardServer")
 
 DEFAULT_PORT = 7890
-STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+STATIC_DIR = resource("static")
 LOOPBACK = {"127.0.0.1", "::1"}
 PEER_ROUTES = {"/api/ping", "/api/sync"}  # the only endpoints reachable from other devices
+UPDATE_CHECK_INTERVAL = 6 * 3600
 
 
 class ClipboardServer:
-    def __init__(self, port: int = DEFAULT_PORT):
+    def __init__(self, port: int = DEFAULT_PORT, on_show: Optional[Callable[[], None]] = None):
         self.port = port
+        self.on_show = on_show
+        self.updater = Updater()
         self.app = web.Application(
             client_max_size=64 * 1024 * 1024,  # fits a 25MB file after base64 + Fernet overhead
             middlewares=[self._access_guard],
@@ -51,18 +56,29 @@ class ClipboardServer:
         self.app.router.add_post("/api/shutdown", self.handle_api_shutdown)
         self.app.router.add_get("/api/status", self.handle_api_status)
         self.app.router.add_get("/api/history", self.handle_api_history)
+        self.app.router.add_get("/api/pairing", self.handle_api_pairing_get)
+        self.app.router.add_post("/api/pairing", self.handle_api_pairing_set)
+        self.app.router.add_post("/api/pairing/copy", self.handle_api_pairing_copy)
+        self.app.router.add_get("/api/update", self.handle_api_update_status)
+        self.app.router.add_post("/api/update/install", self.handle_api_update_install)
+        self.app.router.add_post("/api/update/open", self.handle_api_update_open)
+        self.app.router.add_post("/api/show", self.handle_api_show)
         self.app.router.add_static("/static/", STATIC_DIR, name="static")
 
     @web.middleware
     async def _access_guard(self, request: web.Request, handler):
         """Dashboard/API is localhost-only; LAN peers may only reach the sealed peer endpoints.
-        The Origin check stops other websites open in the local browser from using the API."""
+        The Origin check stops other websites open in the local browser from using the API,
+        the Host check stops DNS-rebinding pages from reading it (e.g. the pairing key)."""
         if request.remote not in LOOPBACK:
             if request.path not in PEER_ROUTES:
                 raise web.HTTPForbidden()
         else:
+            local_hosts = (f"localhost:{self.port}", f"127.0.0.1:{self.port}")
             origin = request.headers.get("Origin")
-            if origin and origin not in (f"http://localhost:{self.port}", f"http://127.0.0.1:{self.port}"):
+            if origin and origin not in tuple(f"http://{h}" for h in local_hosts):
+                raise web.HTTPForbidden()
+            if request.host not in local_hosts:
                 raise web.HTTPForbidden()
         return await handler(request)
 
@@ -95,6 +111,7 @@ class ClipboardServer:
                 },
                 "peers": self.p2p.get_active_peers_list(),
                 "history": self.history[:30],
+                "update": self.updater.status(),
             }
             await ws.send_json(init_payload)
 
@@ -259,12 +276,72 @@ class ClipboardServer:
                 "system": self.p2p.system,
                 "port": self.port,
             },
+            "version": __version__,
             "peers": self.p2p.get_active_peers_list(),
             "history_count": len(self.history),
         })
 
     async def handle_api_history(self, request: web.Request):
         return web.json_response({"history": self.history})
+
+    async def handle_api_pairing_get(self, request: web.Request):
+        return web.json_response({"key": self.p2p.sync_key})
+
+    async def handle_api_pairing_set(self, request: web.Request):
+        try:
+            data = await request.json()
+            self.p2p.set_sync_key(data.get("key", ""))
+            logger.info("Pairing key changed from the dashboard")
+            return web.json_response({"status": "ok"})
+        except ValueError as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=400)
+
+    async def handle_api_pairing_copy(self, request: web.Request):
+        """Copies the key without syncing it: write_local_clipboard marks it as seen, so the
+        poller neither broadcasts it nor adds it to history."""
+        await asyncio.to_thread(self.engine.write_local_clipboard, ClipboardItem("text", self.p2p.sync_key))
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_update_open(self, request: web.Request):
+        webbrowser.open(self.updater.status()["release_url"])
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_update_status(self, request: web.Request):
+        if request.query.get("refresh"):
+            await asyncio.to_thread(self.updater.check)
+        return web.json_response(self.updater.status())
+
+    async def handle_api_update_install(self, request: web.Request):
+        if not self.updater.status()["can_install"] or self.updater.state in ("downloading", "installing"):
+            return web.json_response({"status": "error", "message": "No installable update"}, status=400)
+        loop = asyncio.get_running_loop()
+
+        def on_progress(status: dict):
+            loop.call_soon_threadsafe(asyncio.create_task, self.broadcast_ws({"event": "update_status", "update": status}))
+
+        async def _run():
+            if await asyncio.to_thread(self.updater.download_and_launch_installer, on_progress):
+                logger.info("Installer launched, exiting so it can replace the app.")
+                await asyncio.sleep(0.5)
+                os._exit(0)
+
+        asyncio.create_task(_run())
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_show(self, request: web.Request):
+        """A second launch of the app asks the running instance to bring its window up."""
+        if self.on_show:
+            self.on_show()
+        return web.json_response({"status": "ok"})
+
+    async def _update_check_loop(self):
+        await asyncio.sleep(5)
+        while True:
+            status = await asyncio.to_thread(self.updater.check)
+            if status["available"]:
+                logger.info(f"Update available: {status['latest']}")
+            await self.broadcast_ws({"event": "update_status", "update": status})
+            await asyncio.sleep(UPDATE_CHECK_INTERVAL)
 
     async def handle_api_shutdown(self, request: web.Request):
         logger.info("Shutdown request received from UI / API. Shutting down...")
@@ -292,8 +369,9 @@ class ClipboardServer:
             await asyncio.sleep(0.35)
 
 
-async def start_server(port: int = DEFAULT_PORT):
-    server = ClipboardServer(port=port)
+async def start_server(port: int = DEFAULT_PORT, on_show: Optional[Callable[[], None]] = None,
+                       on_ready: Optional[Callable[[], None]] = None):
+    server = ClipboardServer(port=port, on_show=on_show)
     await server.p2p.start()
 
     runner = web.AppRunner(server.app)
@@ -301,20 +379,14 @@ async def start_server(port: int = DEFAULT_PORT):
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    logger.info("✨ Universal Clipboard Sync running!")
+    logger.info(f"✨ Universal Clipboard {__version__} running!")
     logger.info(f"📊 Dashboard UI: http://localhost:{port}")
     logger.info(f"💻 Device: {server.p2p.hostname} ({server.p2p.system})")
 
-    # Start Tray icon in background if supported
-    if setup_tray:
-        try:
-            setup_tray()
-            logger.info("🟢 System Tray icon initialized (dole vpravo vedle hodin).")
-        except Exception as e:
-            logger.debug(f"Tray init error: {e}")
-
-    # Start clipboard background poller
     asyncio.create_task(server._clipboard_poll_loop())
+    asyncio.create_task(server._update_check_loop())
+    if on_ready:
+        on_ready()
 
     # Keep alive
     while True:

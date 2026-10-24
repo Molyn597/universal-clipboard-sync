@@ -13,6 +13,8 @@ import aiohttp
 from cryptography.fernet import Fernet, InvalidToken
 from typing import Dict, List, Callable, Optional
 
+from app_paths import KEY_FILE
+
 logger = logging.getLogger("P2PSync")
 
 DISCOVERY_PORT = 45678
@@ -20,7 +22,11 @@ BROADCAST_INTERVAL = 2.0
 PEER_TIMEOUT = 8.0
 MESSAGE_TTL = 120  # seconds; sealed messages older than this are rejected (replay protection)
 SYNC_TIMEOUT = aiohttp.ClientTimeout(total=90.0)  # file payloads need far longer than the 3s ping timeout, but under MESSAGE_TTL
-KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync.key")
+MIN_KEY_LENGTH = 16
+
+
+def save_sync_key(key: str):
+    KEY_FILE.write_text(key + "\n", encoding="utf-8")
 
 
 def load_sync_key() -> str:
@@ -28,15 +34,13 @@ def load_sync_key() -> str:
     key = os.environ.get("CLIPBOARD_SYNC_KEY", "").strip()
     if key:
         return key
-    if os.path.exists(KEY_FILE):
-        with open(KEY_FILE, encoding="utf-8") as f:
-            key = f.read().strip()
+    if KEY_FILE.exists():
+        key = KEY_FILE.read_text(encoding="utf-8").strip()
         if key:
             return key
     key = secrets.token_urlsafe(32)
-    with open(KEY_FILE, "w", encoding="utf-8") as f:
-        f.write(key + "\n")
-    logger.warning(f"Generated new pairing key {KEY_FILE} - copy this file to every device you want to sync with.")
+    save_sync_key(key)
+    logger.warning(f"Generated new pairing key {KEY_FILE} - pair other devices from the dashboard.")
     return key
 
 
@@ -128,8 +132,23 @@ class P2PManager:
         self._udp_transport: Optional[asyncio.DatagramTransport] = None
         self._session: Optional[aiohttp.ClientSession] = None
         self._broadcast_targets = get_local_broadcast_ips()
-        secret = hashlib.sha256(load_sync_key().encode("utf-8")).digest()
+        self._apply_key(load_sync_key())
+
+    def _apply_key(self, key: str):
+        self.sync_key = key
+        secret = hashlib.sha256(key.encode("utf-8")).digest()
         self._fernet = Fernet(base64.urlsafe_b64encode(secret))
+
+    def set_sync_key(self, key: str):
+        """Re-pairs at runtime: peers on the old key stop decrypting and drop out after PEER_TIMEOUT."""
+        key = key.strip()
+        if len(key) < MIN_KEY_LENGTH:
+            raise ValueError(f"Pairing key must be at least {MIN_KEY_LENGTH} characters")
+        save_sync_key(key)
+        self._apply_key(key)
+        self.peers.clear()
+        if self.on_peer_change:
+            self.on_peer_change([])
 
     def seal(self, payload: dict) -> bytes:
         """Encrypts + authenticates a message for peers sharing the same pairing key."""

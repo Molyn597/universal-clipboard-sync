@@ -15,3 +15,7 @@ Thumbs.db
 
 # Pairing secret (copy manually between your devices, never commit)
 sync.key
+
+# PyInstaller / installer output
+build/
+dist/
