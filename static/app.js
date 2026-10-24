@@ -2,15 +2,10 @@
 // ICONS (outline, 24px grid)
 // ==========================================
 const ICON_PATHS = {
-    home: '<path d="M5 12l-2 0l9-9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M10 21v-5a2 2 0 0 1 4 0v5"/>',
-    history: '<path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/>',
-    devices: '<rect x="13" y="8" width="8" height="12" rx="1"/><path d="M18 8v-3a1 1 0 0 0-1-1h-13a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h9"/><path d="M16 9h2"/>',
     settings: '<path d="M10.3 4.3c.4-1.8 3-1.8 3.4 0a1.7 1.7 0 0 0 2.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 0 0 1 2.5c1.8.4 1.8 3 0 3.4a1.7 1.7 0 0 0-1 2.6c.9 1.5-.9 3.3-2.4 2.4a1.7 1.7 0 0 0-2.6 1c-.4 1.8-3 1.8-3.4 0a1.7 1.7 0 0 0-2.5-1c-1.6.9-3.3-.9-2.4-2.4a1.7 1.7 0 0 0-1.1-2.6c-1.8-.4-1.8-3 0-3.4a1.7 1.7 0 0 0 1.1-2.5c-.9-1.6.8-3.3 2.4-2.4a1.7 1.7 0 0 0 2.5-1.1z"/><circle cx="12" cy="12" r="3"/>',
     search: '<circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/>',
     pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
     play: '<path d="M7 4v16l13-8z"/>',
-    moon: '<path d="M12 3c.13 0 .26 0 .39 0a7.5 7.5 0 0 0 7.92 12.45a9 9 0 1 1-8.31-12.45z"/>',
-    sun: '<circle cx="12" cy="12" r="4"/><path d="M3 12h1m8-9v1m8 8h1m-9 8v1m-6.4-15.4l.7.7m12.1-.7l-.7.7m0 11.4l.7.7m-12.1-.7l-.7.7"/>',
     'arrow-up': '<path d="M12 5l0 14"/><path d="M18 11l-6-6"/><path d="M6 11l6-6"/>',
     'arrow-down': '<path d="M12 5l0 14"/><path d="M18 13l-6 6"/><path d="M6 13l6 6"/>',
     'file-upload': '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6"/><path d="M9.5 13.5l2.5-2.5l2.5 2.5"/>',
@@ -19,12 +14,21 @@ const ICON_PATHS = {
     pin: '<path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5-1.5l1.5-4l4-4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/>',
     folder: '<path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2"/>',
     trash: '<path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>',
-    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
-    plus: '<path d="M12 5l0 14"/><path d="M5 12l14 0"/>',
+    open: '<path d="M12 6h-6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><path d="M11 13l9-9"/><path d="M15 4h5v5"/>',
     x: '<path d="M18 6l-12 12"/><path d="M6 6l12 12"/>',
+    minus: '<path d="M5 12l14 0"/>',
+    'chevron-left': '<path d="M15 6l-6 6l6 6"/>',
+    paperclip: '<path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5-6.5a3 3 0 0 0-6-6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5-6.5"/>',
     windows: '<path d="M4 6l7-1v7h-7z"/><path d="M13 4.7l7-1.2v8.5h-7z"/><path d="M4 13h7v7l-7-1z"/><path d="M13 13h7v8.5l-7-1.2z"/>',
     apple: '<path d="M8.3 7c-2.3 0-4.3 1.9-4.3 5c0 4 2.8 9 5 9c1.2 0 1.8-.6 3-.6s1.8.6 3 .6c2.2 0 5-5 5-9c0-3.1-2-5-4.2-5c-1.4 0-2.6.8-3.8.8s-2.4-.8-3.7-.8z"/><path d="M12 4a2 2 0 0 0 2-2"/>',
-    folderdoc: '<path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2"/>',
+    devices: '<rect x="13" y="8" width="8" height="12" rx="1"/><path d="M18 8v-3a1 1 0 0 0-1-1h-13a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h9"/>',
+    doc: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+    sheet: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M8 11h8v7h-8z"/><path d="M8 15h8"/><path d="M11 11v7"/>',
+    slides: '<path d="M3 4h18"/><path d="M4 4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-10"/><path d="M12 16v4"/><path d="M9 20h6"/>',
+    archive: '<rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10"/><path d="M10 12l4 0"/>',
+    audio: '<circle cx="6" cy="17" r="3"/><circle cx="16" cy="17" r="3"/><path d="M9 17v-13h10v13"/><path d="M9 8h10"/>',
+    video: '<path d="M15 10l4.5-2.3a1 1 0 0 1 1.5.9v6.8a1 1 0 0 1-1.5.9l-4.5-2.3z"/><rect x="3" y="6" width="12" height="12" rx="2"/>',
+    clipboard: '<path d="M9 5h-2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/>',
 };
 
 function icon(name) {
@@ -35,24 +39,36 @@ function hydrateIcons(root = document) {
     root.querySelectorAll('[data-icon]').forEach(el => { el.outerHTML = icon(el.dataset.icon); });
 }
 
+const FILE_KINDS = {
+    folder: { icon: 'folder', color: 'var(--amber)', label: 'Složka' },
+    doc: { icon: 'doc', color: 'var(--blue)', label: 'Dokument' },
+    sheet: { icon: 'sheet', color: 'var(--mint)', label: 'Tabulka' },
+    slides: { icon: 'slides', color: 'var(--rose)', label: 'Prezentace' },
+    archive: { icon: 'archive', color: 'var(--amber)', label: 'Archiv' },
+    audio: { icon: 'audio', color: 'var(--lavender)', label: 'Zvuk' },
+    video: { icon: 'video', color: 'var(--lavender)', label: 'Video' },
+    pdf: { icon: 'doc', color: 'var(--rose)', label: 'PDF' },
+    text: { icon: 'doc', color: 'var(--blue)', label: 'Text' },
+    image: { icon: 'doc', color: 'var(--lavender)', label: 'Obrázek' },
+    file: { icon: 'doc', color: 'var(--periwinkle)', label: 'Soubor' },
+};
+
 // ==========================================
 // STATE
 // ==========================================
 const state = {
     history: [],
-    stats: { sent_count: 0, sent_bytes: 0, received_count: 0, received_bytes: 0 },
     settings: { theme: 'dark', paused: false, notifications: true },
     peers: [],
     node: null,
     version: '',
     update: null,
     receiveDir: '',
-    view: 'dashboard',
     dir: 'all',
-    type: 'all',
     search: '',
 };
 let ws = null;
+let lightboxItem = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -71,14 +87,17 @@ function formatBytes(bytes) {
     return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-function formatTime(ts) {
+function formatClock(ts) {
+    return new Date(ts * 1000).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+}
+
+function dayLabel(ts) {
     const d = new Date(ts * 1000);
-    const diff = (Date.now() - d.getTime()) / 1000;
-    if (diff < 60) return 'právě teď';
-    if (diff < 3600) return `před ${Math.floor(diff / 60)} min`;
-    const time = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
-    if (d.toDateString() === new Date().toDateString()) return `dnes ${time}`;
-    return `${d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${time}`;
+    const today = new Date();
+    const yesterday = new Date(Date.now() - 86400000);
+    if (d.toDateString() === today.toDateString()) return 'Dnes';
+    if (d.toDateString() === yesterday.toDateString()) return 'Včera';
+    return d.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function showToast(message, type = 'success') {
@@ -86,7 +105,7 @@ function showToast(message, type = 'success') {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     $('toasts').appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
+    setTimeout(() => toast.remove(), 2600);
 }
 
 async function api(path, body) {
@@ -100,9 +119,8 @@ async function api(path, body) {
     return data;
 }
 
-function osIcon(system) {
-    return system === 'Darwin' ? 'apple' : 'windows';
-}
+const osIcon = (system) => (system === 'Darwin' ? 'apple' : 'windows');
+const osColor = (system) => (system === 'Darwin' ? 'var(--lavender)' : 'var(--blue)');
 
 // ==========================================
 // WEBSOCKET
@@ -118,27 +136,24 @@ function handleEvent(data) {
         case 'init':
             Object.assign(state, {
                 node: data.node, version: data.version, peers: data.peers || [], history: data.history || [],
-                stats: data.stats, settings: data.settings, update: data.update, receiveDir: data.receive_dir,
+                settings: data.settings, update: data.update, receiveDir: data.receive_dir,
             });
+            if (data.node?.system === 'Darwin' && window.pywebview) document.documentElement.classList.add('mac-frameless');
             renderAll();
             break;
         case 'clipboard_item':
             state.history = [data.item, ...state.history.filter(i => i.hash !== data.item.hash)];
-            state.stats = data.stats || state.stats;
-            renderStats();
-            renderLists();
-            if (data.from_remote) showToast(`Přijato z ${data.item.device}`);
-            else if (data.item.metadata?.too_large) showToast('Soubory jsou větší než 25 MB, neodeslány.', 'error');
+            renderTimeline();
+            if (data.item.metadata?.too_large) showToast('Soubory jsou větší než 25 MB, neodeslány', 'error');
             break;
         case 'history':
             state.history = data.history;
-            state.stats = data.stats || state.stats;
-            renderStats();
-            renderLists();
+            renderTimeline();
             break;
         case 'peers_updated':
             state.peers = data.peers || [];
-            renderPeers();
+            renderBridge();
+            renderDevices();
             break;
         case 'settings':
             state.settings = data.settings;
@@ -152,265 +167,232 @@ function handleEvent(data) {
 }
 
 // ==========================================
-// RENDERING
+// BRIDGE (connection status)
 // ==========================================
-function renderAll() {
-    $('versionLink').textContent = `v${state.version}`;
-    renderSettings();
-    renderStats();
-    renderPeers();
-    renderLists();
-    renderUpdate();
-}
-
-function renderStats() {
-    const s = state.stats;
-    $('statSent').textContent = s.sent_count;
-    $('statSentBytes').textContent = `· ${formatBytes(s.sent_bytes)}`;
-    $('statReceived').textContent = s.received_count;
-    $('statReceivedBytes').textContent = `· ${formatBytes(s.received_bytes)}`;
-}
-
-function renderPeers() {
-    const peers = state.peers;
-    $('statPeers').textContent = peers.length;
-    $('statPeersLabel').textContent = peers.length ? peers.map(p => p.name).join(', ') : 'Žádné připojené zařízení';
-
-    const pill = $('statusPill');
-    pill.classList.toggle('connected', peers.length > 0 && !state.settings.paused);
-    pill.classList.toggle('paused', state.settings.paused);
-    $('statusText').textContent = state.settings.paused
-        ? 'Synchronizace pozastavena'
-        : peers.length ? `Propojeno: ${peers.map(p => p.name).join(', ')}` : 'Hledám zařízení na Wi-Fi…';
-
-    if (state.node) {
-        $('ownDevice').innerHTML = deviceRow(state.node, 'Toto zařízení', 'var(--blue)');
-    }
-    $('peerList').innerHTML = peers.length
-        ? peers.map(p => deviceRow(p, `${p.host}`, 'var(--lavender)', '<span class="tag received">Aktivní</span>')).join('')
-        : '<p class="muted">Zatím nic. Spusť aplikaci na druhém zařízení ve stejné Wi-Fi a spáruj ho kódem vpravo.</p>';
-}
-
-function deviceRow(device, sub, color, extra = '') {
+function nodeHtml(device, sub, right = false) {
     return `
-        <div class="device-row">
-            <span class="device-badge" style="background:${color}">${icon(osIcon(device.system))}</span>
-            <div><div class="device-name">${escapeHtml(device.name)}</div><div class="device-sub">${escapeHtml(sub)}</div></div>
-            ${extra}
+        <div class="node ${right ? 'right' : ''}">
+            <span class="node-badge" style="background:${osColor(device.system)}">${icon(osIcon(device.system))}</span>
+            <div style="min-width:0"><div class="node-name">${escapeHtml(device.name)}</div><div class="node-sub">${escapeHtml(sub)}</div></div>
         </div>`;
 }
 
-function itemTitle(item) {
-    if (item.type === 'text') return item.data.split('\n').find(l => l.trim()) || item.data;
+function renderBridge() {
+    if (!state.node) return;
+    const me = nodeHtml(state.node, 'Toto zařízení');
+    const peers = state.peers;
+    let html;
+    if (state.settings.paused) {
+        const other = peers[0] ? nodeHtml(peers[0], 'Pozastaveno', true) : '';
+        html = `${me}<div class="link paused"><span id="resumeLink">pozastaveno · obnovit</span></div>${other}`;
+    } else if (peers.length) {
+        const more = peers.length > 1 ? ` +${peers.length - 1}` : '';
+        html = `${me}<div class="link"><span>propojeno</span></div>${nodeHtml({ ...peers[0], name: peers[0].name + more }, 'Připojeno', true)}`;
+    } else {
+        html = `${me}<div class="link searching"><span>hledám na Wi-Fi…</span></div>
+            <button class="pair-btn" id="pairBtn">Spárovat</button>`;
+    }
+    $('bridge').innerHTML = html;
+    $('pairBtn')?.addEventListener('click', () => openSettings(true));
+    $('resumeLink')?.addEventListener('click', () => saveSettings({ paused: false }));
+}
+
+// ==========================================
+// TIMELINE
+// ==========================================
+function firstLine(text) {
+    return (text.split('\n').find(l => l.trim()) || text).trim();
+}
+
+function isUrl(text) {
+    return /^https?:\/\/\S+$/.test(text.trim());
+}
+
+function looksLikeCode(text) {
+    return /[{};<>]|^\s{2,}\S/m.test(text) && text.includes('\n');
+}
+
+function previewHtml(item) {
+    const m = item.metadata || {};
+    if (item.type === 'text') {
+        const text = item.data;
+        if (isUrl(text)) {
+            let domain = '';
+            try { domain = new URL(text.trim()).hostname.replace(/^www\./, ''); } catch (e) { /* not a URL after all */ }
+            return `<div class="pv-link" data-action="view"><div class="domain">${escapeHtml(domain)}</div><div class="url">${escapeHtml(text.trim())}</div></div>`;
+        }
+        return `<div class="pv-text ${looksLikeCode(text) ? 'code' : ''}" data-action="view">${escapeHtml(text)}</div>`;
+    }
     if (item.type === 'image') {
-        const m = item.metadata || {};
-        return m.filename || `Obrázek ${m.width || ''}×${m.height || ''}`;
+        const src = m.thumb || item.data;
+        const img = src ? `<img class="pv-image" data-action="view" src="data:image/png;base64,${src}" alt="">` : '';
+        return `${img}<div class="cap"><div class="cap-name">${escapeHtml(m.filename || 'Obrázek ze schránky')}</div>
+            <div class="cap-sub">${m.width || '?'}×${m.height || '?'} px · ${formatBytes(m.size_bytes)}</div></div>`;
     }
-    const files = item.metadata?.files || [];
-    if (files.length === 1) return files[0].name;
-    return `${files[0]?.name || 'Soubory'} a ${files.length - 1} další`;
+    const files = m.files || [];
+    const p = m.preview || { kind: 'file' };
+    const first = files[0] || { name: 'Soubor' };
+    const more = files.length > 1
+        ? `<div class="more-files">+ ${files.length - 1} ${files.length === 2 ? 'další' : 'další'}: ${escapeHtml(files.slice(1, 4).map(f => f.name).join(', '))}${files.length > 4 ? '…' : ''}</div>`
+        : '';
+    const kind = FILE_KINDS[p.kind] || FILE_KINDS.file;
+    const sizeText = first.is_dir ? `Složka · ${formatBytes(m.size_bytes)}` : `${p.pages ? `${p.pages} ${p.pages === 1 ? 'strana' : p.pages < 5 ? 'strany' : 'stran'} · ` : ''}${formatBytes(files.length > 1 ? m.size_bytes : first.size_bytes)}`;
+    const caption = `<div class="cap"><div class="cap-name">${escapeHtml(first.name)}</div><div class="cap-sub">${kind.label} · ${sizeText}</div></div>`;
+
+    if (p.kind === 'image' && p.thumb) {
+        return `<img class="pv-image" data-action="view" src="data:image/png;base64,${p.thumb}" alt="">${caption}${more}`;
+    }
+    if (p.kind === 'pdf' && p.thumb) {
+        return `<div class="pdf-wrap" data-action="view"><img src="data:image/png;base64,${p.thumb}" alt=""><span class="badge">PDF</span></div>${caption}${more}`;
+    }
+    const ext = first.is_dir ? '' : (first.name.includes('.') ? first.name.split('.').pop().slice(0, 4).toUpperCase() : '');
+    const tile = `<span class="tile" style="background:${kind.color}">${icon(kind.icon)}${escapeHtml(ext)}</span>`;
+    const head = `<div class="pv-file">${tile}<div style="min-width:0"><div class="cap-name">${escapeHtml(first.name)}</div><div class="cap-sub">${kind.label} · ${sizeText}</div></div></div>`;
+    const snippet = p.kind === 'text' && p.snippet ? `<div class="pv-snippet" data-action="view">${escapeHtml(p.snippet)}</div>` : '';
+    return `${head}${snippet}${more}`;
 }
 
-function itemThumb(item) {
-    if (item.type === 'image') {
-        const src = item.metadata?.thumb || item.data;
-        return src ? `<div class="thumb image"><img src="data:image/png;base64,${src}" alt=""></div>` : '<div class="thumb image"><span class="doc">IMG</span></div>';
+function whereHtml(item) {
+    if (item.direction === 'received') {
+        return `<span class="where">${icon('arrow-down')}z ${escapeHtml(item.device)} · ${formatClock(item.timestamp)}</span>`;
     }
-    if (item.type === 'file') {
-        const files = item.metadata?.files || [];
-        if (files.length === 1 && files[0].is_dir) return `<div class="thumb file">${icon('folder')}</div>`;
-        const ext = files.length === 1 ? (files[0].name.split('.').pop() || '').slice(0, 4).toUpperCase() : `${files.length}×`;
-        return `<div class="thumb file"><span class="doc">${escapeHtml(ext || 'FILE')}</span></div>`;
-    }
-    return '<div class="thumb text"><span class="doc">TXT</span></div>';
-}
-
-function itemSize(item) {
-    if (item.type === 'text') return `${item.data.length} znaků`;
-    if (item.type === 'file') {
-        const m = item.metadata || {};
-        return `${m.count || 1} ${m.count === 1 ? 'soubor' : 'souborů'} · ${formatBytes(m.size_bytes)}`;
-    }
-    return formatBytes(item.metadata?.size_bytes);
-}
-
-function directionTag(item) {
-    if (item.direction === 'received') return '<span class="tag received">Přijato</span>';
-    if (item.metadata?.too_large) return '<span class="tag warn">Nad 25 MB</span>';
-    if (!item.targets || !item.targets.length) return '<span class="tag local">Jen lokálně</span>';
-    return '<span class="tag sent">Odesláno</span>';
-}
-
-function directionMeta(item) {
-    if (item.direction === 'received') return `<span class="meta">${icon('arrow-down')}z ${escapeHtml(item.device)}</span>`;
+    if (item.metadata?.too_large) return `<span class="where warn">${icon('arrow-up')}Nad 25 MB – neodesláno</span>`;
     const targets = item.targets || [];
-    return `<span class="meta">${icon('arrow-up')}${targets.length ? `do ${escapeHtml(targets.join(', '))}` : 'z tohoto zařízení'}</span>`;
+    const to = targets.length ? `do ${escapeHtml(targets.join(', '))}` : 'jen na tomto zařízení';
+    return `<span class="where">${icon('arrow-up')}${to} · ${formatClock(item.timestamp)}</span>`;
 }
 
-function renderItem(item) {
+function messageHtml(item) {
     const isFile = item.type === 'file';
-    const line = item.direction === 'received' ? 'received' : (item.targets?.length ? 'sent' : '');
+    const dir = item.direction === 'received' ? 'in' : 'out';
     return `
-        <div class="item" data-hash="${item.hash}">
-            <div class="item-main">
-                ${itemThumb(item)}
-                <div class="item-body">
-                    <div class="item-title-row">
-                        <div class="item-title" title="${escapeHtml(itemTitle(item))}">${item.pinned ? `<span class="pin-mark">●</span> ` : ''}${escapeHtml(itemTitle(item))}</div>
-                        <div class="item-tools">
-                            ${isFile ? `<button class="tool" data-action="reveal" title="Zobrazit ve složce">${icon('folder')}</button>` : ''}
-                            <button class="tool" data-action="delete" title="Smazat z historie">${icon('trash')}</button>
-                        </div>
-                    </div>
-                    <div class="item-meta">
-                        ${directionMeta(item)}
-                        <span class="meta">${icon('clock')}${formatTime(item.timestamp)}</span>
-                        <span class="meta">${escapeHtml(itemSize(item))}</span>
-                        ${directionTag(item)}
+        <div class="msg ${dir} ${item.pinned ? 'pinned' : ''}" data-hash="${item.hash}">
+            <div class="bubble">
+                ${previewHtml(item)}
+                <div class="meta">
+                    ${whereHtml(item)}
+                    <div class="actions">
+                        ${isFile ? `<button class="act extra" data-action="reveal" title="Zobrazit ve složce">${icon('folder')}</button>` : ''}
+                        <button class="act extra" data-action="pin" title="${item.pinned ? 'Odepnout' : 'Připnout'}">${icon('pin')}</button>
+                        <button class="act extra" data-action="delete" title="Smazat z historie">${icon('trash')}</button>
+                        ${isFile ? `<button class="act" data-action="open" title="Otevřít">${icon('open')}</button>` : ''}
+                        <button class="act" data-action="copy" title="Kopírovat do schránky">${icon('copy')}Kopírovat</button>
                     </div>
                 </div>
-                ${line ? `<div class="item-line ${line}"></div>` : ''}
             </div>
-            <button class="item-action" data-action="copy">${icon('copy')}Kopírovat</button>
-            <button class="item-action secondary" data-action="pin">${icon('pin')}${item.pinned ? 'Odepnout' : 'Připnout'}</button>
         </div>`;
 }
 
-function matchesSearch(item, q) {
-    if (!q) return true;
-    const hay = item.type === 'text' ? item.data : [itemTitle(item), ...(item.metadata?.files || []).map(f => f.name)].join(' ');
-    return `${hay} ${item.device || ''}`.toLowerCase().includes(q);
+function searchText(item) {
+    if (item.type === 'text') return item.data;
+    const m = item.metadata || {};
+    return [m.filename, ...(m.files || []).map(f => f.name), m.preview?.snippet].filter(Boolean).join(' ');
 }
 
-function sortedHistory() {
-    return [...state.history].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.timestamp - a.timestamp);
-}
-
-function renderList(el, items, emptyTitle, emptyText) {
-    el.innerHTML = items.length
-        ? items.map(renderItem).join('')
-        : `<div class="empty"><h3>${emptyTitle}</h3><p>${emptyText}</p></div>`;
-}
-
-function renderLists() {
+function renderTimeline() {
     const q = state.search.trim().toLowerCase();
-    const all = sortedHistory().filter(i => matchesSearch(i, q));
+    const items = [...state.history]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .filter(i => state.dir === 'all' || (state.dir === 'pinned' ? i.pinned : i.direction === state.dir))
+        .filter(i => !q || `${searchText(i)} ${i.device || ''}`.toLowerCase().includes(q));
 
-    renderList($('recentList'), all.slice(0, 5),
-        q ? 'Nic nenalezeno' : 'Schránka je připravená',
-        q ? 'Zkus jiné hledání.' : 'Zkopíruj cokoliv (Ctrl+C / Cmd+C) a objeví se to tady i na druhém zařízení.');
-
-    const filtered = all.filter(i =>
-        (state.dir === 'all' || (state.dir === 'pinned' ? i.pinned : i.direction === state.dir)) &&
-        (state.type === 'all' || i.type === state.type));
-    renderList($('historyList'), filtered, 'Nic tu není', 'Pro tenhle filtr zatím žádné položky.');
-}
-
-function renderSettings() {
-    const s = state.settings;
-    document.documentElement.dataset.theme = s.theme;
-    $('themeToggle').innerHTML = icon(s.theme === 'dark' ? 'moon' : 'sun');
-    document.querySelectorAll('#themeSelect button').forEach(b => b.classList.toggle('active', b.dataset.value === s.theme));
-    $('pauseToggle').innerHTML = icon(s.paused ? 'play' : 'pause');
-    $('pauseToggle').classList.toggle('on', s.paused);
-    $('pauseToggle').title = s.paused ? 'Obnovit synchronizaci' : 'Pozastavit synchronizaci';
-    $('pausedSwitch').checked = s.paused;
-    $('notificationsSwitch').checked = s.notifications;
-    $('receiveDir').textContent = state.receiveDir || '–';
-    renderPeers();
-}
-
-function renderUpdate() {
-    const u = state.update;
-    if (!u) return;
-    const busy = u.state === 'downloading' || u.state === 'installing';
-    $('updateDot').hidden = !u.available;
-    $('updatePill').hidden = !u.available || busy;
-    $('updatePillText').textContent = `Nová verze ${u.latest}`;
-    $('updateProgress').hidden = !busy;
-    $('updateProgressBar').style.width = `${Math.round(u.progress * 100)}%`;
-    $('installUpdateBtn').hidden = !u.available || busy;
-    $('installUpdateBtn').textContent = u.can_install ? 'Aktualizovat' : 'Stáhnout';
-    $('checkUpdateBtn').hidden = busy;
-
-    let text = `Verze ${u.current} je aktuální.`;
-    if (u.state === 'downloading') text = `Stahuji verzi ${u.latest}… ${Math.round(u.progress * 100)} %`;
-    else if (u.state === 'installing') text = `Instaluji verzi ${u.latest}, aplikace se za chvíli znovu spustí…`;
-    else if (u.state === 'error') text = `Aktualizace se nezdařila: ${u.error}`;
-    else if (u.available) text = `Je dostupná verze ${u.latest} (máš ${u.current}).`;
-    $('updateStatusText').textContent = text;
+    if (!items.length) {
+        const searching = q || state.dir !== 'all';
+        $('timeline').innerHTML = `
+            <div class="empty">${icon('clipboard')}
+                <h3>${searching ? 'Nic nenalezeno' : 'Zatím tu nic není'}</h3>
+                <p>${searching ? 'Zkus jiný filtr nebo hledání.' : 'Zkopíruj cokoliv (Ctrl+C / Cmd+C) nebo sem přetáhni soubor – objeví se to tady i na druhém zařízení.'}</p>
+            </div>`;
+        return;
+    }
+    let lastDay = '';
+    $('timeline').innerHTML = items.map(item => {
+        const day = dayLabel(item.timestamp);
+        const sep = day !== lastDay ? `<div class="day">${day}</div>` : '';
+        lastDay = day;
+        return sep + messageHtml(item);
+    }).join('');
 }
 
 // ==========================================
-// NAVIGATION & FILTERS
+// ITEM ACTIONS & FULL-SIZE PREVIEW
 // ==========================================
-function showView(view) {
-    state.view = view;
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === view));
-    $('composeBtn').hidden = view === 'settings';
-    if (view === 'devices') loadPairingKey();
+function openLightbox(item) {
+    lightboxItem = item;
+    const m = item.metadata || {};
+    let title = 'Text', body;
+    if (item.type === 'text') {
+        body = `<pre>${escapeHtml(item.data)}</pre>`;
+    } else if (item.type === 'image') {
+        title = m.filename || `Obrázek ${m.width}×${m.height}`;
+        body = `<img src="data:image/png;base64,${item.data || m.thumb}" alt="">`;
+    } else {
+        const p = m.preview || {};
+        title = m.files?.[0]?.name || 'Soubor';
+        if (p.kind === 'image') body = `<img src="/api/history/file?hash=${item.hash}" alt="">`;
+        else if (p.kind === 'pdf') body = `<img src="data:image/png;base64,${p.thumb}" alt="">`;
+        else body = `<pre>${escapeHtml(p.snippet || '')}</pre>`;
+    }
+    $('lightboxTitle').textContent = title;
+    $('lightboxBody').innerHTML = body;
+    $('lightbox').hidden = false;
 }
 
-document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
-document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => showView(b.dataset.goto)));
-$('versionLink').addEventListener('click', () => showView('settings'));
-$('updatePill').addEventListener('click', () => showView('settings'));
-
-function bindSegmented(id, key) {
-    $(id).addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        state[key] = btn.dataset.value;
-        $(id).querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-        renderLists();
-    });
+function closeLightbox() {
+    $('lightbox').hidden = true;
+    $('lightboxBody').innerHTML = '';
+    lightboxItem = null;
 }
-bindSegmented('dirFilter', 'dir');
-bindSegmented('typeFilter', 'type');
 
-$('searchInput').addEventListener('input', (e) => {
-    state.search = e.target.value;
-    renderLists();
-    if (state.search && state.view !== 'dashboard' && state.view !== 'history') showView('history');
-});
+async function copyItem(hash) {
+    await api('/api/history/copy', { hash });
+    showToast('Zkopírováno do schránky');
+}
 
-// ==========================================
-// ITEM ACTIONS
-// ==========================================
-document.addEventListener('click', async (e) => {
+$('timeline').addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-action]');
-    const row = btn?.closest('.item');
+    const row = btn?.closest('.msg');
     if (!btn || !row) return;
     const hash = row.dataset.hash;
     const item = state.history.find(i => i.hash === hash);
     try {
         switch (btn.dataset.action) {
-            case 'copy':
-                await api('/api/history/copy', { hash });
-                showToast('Zkopírováno do schránky');
-                break;
-            case 'pin':
-                await api('/api/history/pin', { hash, pinned: !item?.pinned });
-                break;
-            case 'delete':
-                await api('/api/history/delete', { hash });
-                break;
-            case 'reveal':
-                await api('/api/history/reveal', { hash });
-                break;
+            case 'view': openLightbox(item); break;
+            case 'copy': await copyItem(hash); break;
+            case 'open': await api('/api/history/open', { hash }); break;
+            case 'reveal': await api('/api/history/reveal', { hash }); break;
+            case 'pin': await api('/api/history/pin', { hash, pinned: !item?.pinned }); break;
+            case 'delete': await api('/api/history/delete', { hash }); break;
         }
     } catch (err) {
         showToast(err.message, 'error');
     }
 });
 
-$('clearHistoryBtn').addEventListener('click', async () => {
-    if (confirm('Smazat z historie všechny nepřipnuté položky?')) await api('/api/history/clear', {});
+$('lightboxClose').addEventListener('click', closeLightbox);
+$('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+$('lightboxCopy').addEventListener('click', async () => {
+    if (lightboxItem) await copyItem(lightboxItem.hash).catch(err => showToast(err.message, 'error'));
 });
 
 // ==========================================
-// FILE DROP & PASTE
+// FILTERS
+// ==========================================
+$('dirFilter').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    state.dir = btn.dataset.value;
+    $('dirFilter').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    renderTimeline();
+});
+
+$('searchInput').addEventListener('input', (e) => {
+    state.search = e.target.value;
+    renderTimeline();
+});
+
+// ==========================================
+// COMPOSER, FILE DROP & PASTE
 // ==========================================
 async function uploadFiles(files) {
     if (!files.length) return;
@@ -420,7 +402,7 @@ async function uploadFiles(files) {
         const res = await fetch('/api/upload-files', { method: 'POST', body: form });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
-        showToast(data.status === 'already_sent' ? 'Tyhle soubory už byly odeslány.' : `Odesláno: ${data.count} ${data.count === 1 ? 'soubor' : 'souborů'}`);
+        if (data.status === 'already_sent') showToast('Tyhle soubory už byly odeslány');
     } catch (err) {
         showToast(`Nepodařilo se odeslat: ${err.message}`, 'error');
     }
@@ -430,22 +412,44 @@ async function uploadImage(file) {
     const form = new FormData();
     form.append('file', file, file.name || 'screenshot.png');
     const res = await fetch('/api/upload', { method: 'POST', body: form });
-    if (res.ok) showToast('Obrázek odeslán');
-    else showToast('Obrázek se nepodařilo odeslat', 'error');
+    if (!res.ok) showToast('Obrázek se nepodařilo odeslat', 'error');
 }
+
+function sendText() {
+    const text = $('composeText').value;
+    if (!text.trim() || ws?.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ action: 'push_text', text }));
+    $('composeText').value = '';
+    autosize();
+}
+
+function autosize() {
+    const ta = $('composeText');
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+}
+
+$('composeText').addEventListener('input', autosize);
+$('composeText').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendText();
+    }
+});
+$('sendBtn').addEventListener('click', sendText);
+$('attachBtn').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', (e) => { uploadFiles(e.target.files); e.target.value = ''; });
 
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => {
     if (![...e.dataTransfer.types].includes('Files')) return;
     dragDepth++;
     $('dropOverlay').hidden = false;
-    $('dropCard').classList.add('dragover');
 });
 window.addEventListener('dragleave', () => {
     if (--dragDepth <= 0) {
         dragDepth = 0;
         $('dropOverlay').hidden = true;
-        $('dropCard').classList.remove('dragover');
     }
 });
 window.addEventListener('dragover', (e) => e.preventDefault());
@@ -453,18 +457,13 @@ window.addEventListener('drop', (e) => {
     e.preventDefault();
     dragDepth = 0;
     $('dropOverlay').hidden = true;
-    $('dropCard').classList.remove('dragover');
-    // A dropped folder arrives as a zero-byte entry without a type; copy folders with Ctrl+C instead
+    // A dropped folder arrives as a zero-byte entry without a type; folders go through Ctrl+C instead
     const files = [...e.dataTransfer.files].filter(f => f.size > 0 || f.type);
-    if (files.length < e.dataTransfer.files.length) showToast('Složky přetáhnout nejde – zkopíruj je přes Ctrl+C.', 'error');
+    if (files.length < e.dataTransfer.files.length) showToast('Složky přetáhnout nejde – zkopíruj je přes Ctrl+C', 'error');
     uploadFiles(files);
 });
 
-$('browseBtn').addEventListener('click', () => $('fileInput').click());
-$('fileInput').addEventListener('change', (e) => { uploadFiles(e.target.files); e.target.value = ''; });
-
 window.addEventListener('paste', (e) => {
-    if (e.target.closest('input, textarea')) return;
     const files = [...(e.clipboardData?.files || [])];
     if (!files.length) return;
     e.preventDefault();
@@ -474,33 +473,20 @@ window.addEventListener('paste', (e) => {
 });
 
 // ==========================================
-// COMPOSE TEXT
+// SETTINGS SHEET
 // ==========================================
-function openCompose() {
-    $('composeModal').hidden = false;
-    $('composeText').focus();
+function openSettings(focusPairing = false) {
+    $('settingsSheet').hidden = false;
+    loadPairingKey();
+    api('/api/update').then(u => { state.update = u; renderUpdate(); }).catch(() => {});
+    if (focusPairing) setTimeout(() => $('newPairingKey').focus(), 50);
 }
-function closeCompose() {
-    $('composeModal').hidden = true;
-}
-function sendCompose() {
-    const text = $('composeText').value;
-    if (!text.trim() || ws?.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ action: 'push_text', text }));
-    $('composeText').value = '';
-    closeCompose();
-    showToast('Odesláno do všech zařízení');
-}
-$('composeBtn').addEventListener('click', openCompose);
-$('composeClose').addEventListener('click', closeCompose);
-$('composeSend').addEventListener('click', sendCompose);
-$('composeModal').addEventListener('click', (e) => { if (e.target.id === 'composeModal') closeCompose(); });
-$('composeText').addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'Enter') sendCompose(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCompose(); });
 
-// ==========================================
-// SETTINGS
-// ==========================================
+function closeSettings() {
+    $('settingsSheet').hidden = true;
+    $('ownPairingKey').value = '';
+}
+
 async function saveSettings(changes) {
     try {
         state.settings = await api('/api/settings', changes);
@@ -510,21 +496,55 @@ async function saveSettings(changes) {
     }
 }
 
-$('pauseToggle').addEventListener('click', () => saveSettings({ paused: !state.settings.paused }));
-$('pausedSwitch').addEventListener('change', (e) => saveSettings({ paused: e.target.checked }));
-$('notificationsSwitch').addEventListener('change', (e) => saveSettings({ notifications: e.target.checked }));
-$('themeToggle').addEventListener('click', () => saveSettings({ theme: state.settings.theme === 'dark' ? 'light' : 'dark' }));
-$('themeSelect').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) saveSettings({ theme: b.dataset.value }); });
-$('openReceivedBtn').addEventListener('click', () => api('/api/open-received', {}));
+function renderDevices() {
+    if (!state.node) return;
+    const device = (d, sub, status) => `
+        <div class="device">
+            <span class="node-badge" style="background:${osColor(d.system)}">${icon(osIcon(d.system))}</span>
+            <div class="grow"><div class="row-title">${escapeHtml(d.name)}</div><div class="muted">${escapeHtml(sub)}</div></div>
+            ${status}
+        </div>`;
+    $('deviceList').innerHTML = device(state.node, state.node.system === 'Darwin' ? 'macOS' : 'Windows', '<span class="status me">Toto zařízení</span>')
+        + (state.peers.length
+            ? state.peers.map(p => device(p, `${p.system === 'Darwin' ? 'macOS' : 'Windows'} · ${p.host}`, '<span class="status">Připojeno</span>')).join('')
+            : '<div class="device"><div class="muted">Žádné další zařízení není připojené. Spusť aplikaci na druhém zařízení ve stejné Wi-Fi a spáruj ho kódem níže.</div></div>');
+}
 
-$('checkUpdateBtn').addEventListener('click', async () => {
-    $('updateStatusText').textContent = 'Kontroluji…';
-    state.update = await api('/api/update?refresh=1');
-    renderUpdate();
-    if (!state.update.available) showToast('Máš nejnovější verzi');
-});
+function renderSettings() {
+    const s = state.settings;
+    document.documentElement.dataset.theme = s.theme;
+    document.querySelectorAll('#themeSelect button').forEach(b => b.classList.toggle('active', b.dataset.value === s.theme));
+    $('pauseBtn').innerHTML = icon(s.paused ? 'play' : 'pause');
+    $('pauseBtn').classList.toggle('on', s.paused);
+    $('pauseBtn').title = s.paused ? 'Obnovit synchronizaci' : 'Pozastavit synchronizaci';
+    $('pausedSwitch').checked = s.paused;
+    $('notificationsSwitch').checked = s.notifications;
+    $('receiveDir').textContent = state.receiveDir || '–';
+    renderBridge();
+}
 
-$('installUpdateBtn').addEventListener('click', async () => {
+function renderUpdate() {
+    const u = state.update;
+    if (!u) return;
+    const busy = u.state === 'downloading' || u.state === 'installing';
+    $('updateBtn').hidden = !u.available;
+    $('updateBtnText').textContent = busy ? `${Math.round(u.progress * 100)} %` : 'Aktualizovat';
+    $('updateProgress').hidden = !busy;
+    $('updateProgressBar').style.width = `${Math.round(u.progress * 100)}%`;
+    $('installUpdateBtn').hidden = !u.available || busy;
+    $('installUpdateBtn').textContent = u.can_install ? 'Aktualizovat' : 'Stáhnout';
+    $('checkUpdateBtn').hidden = busy;
+    $('versionText').textContent = `Universal Clipboard ${u.current}`;
+
+    let text = `Verze ${u.current} je aktuální.`;
+    if (u.state === 'downloading') text = `Stahuji verzi ${u.latest}… ${Math.round(u.progress * 100)} %`;
+    else if (u.state === 'installing') text = `Instaluji verzi ${u.latest}, aplikace se znovu spustí…`;
+    else if (u.state === 'error') text = `Aktualizace se nezdařila: ${u.error}`;
+    else if (u.available) text = `Je dostupná verze ${u.latest} (máš ${u.current}).`;
+    $('updateStatusText').textContent = text;
+}
+
+async function installUpdate() {
     if (!state.update?.can_install) {
         api('/api/update/open', {});
         return;
@@ -534,6 +554,27 @@ $('installUpdateBtn').addEventListener('click', async () => {
     } catch (err) {
         showToast('Aktualizaci se nepodařilo spustit', 'error');
     }
+}
+
+$('settingsBtn').addEventListener('click', () => openSettings());
+$('sheetBack').addEventListener('click', closeSettings);
+$('pauseBtn').addEventListener('click', () => saveSettings({ paused: !state.settings.paused }));
+$('pausedSwitch').addEventListener('change', (e) => saveSettings({ paused: e.target.checked }));
+$('notificationsSwitch').addEventListener('change', (e) => saveSettings({ notifications: e.target.checked }));
+$('themeSelect').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) saveSettings({ theme: b.dataset.value }); });
+$('openReceivedBtn').addEventListener('click', () => api('/api/open-received', {}));
+$('updateBtn').addEventListener('click', installUpdate);
+$('installUpdateBtn').addEventListener('click', installUpdate);
+
+$('checkUpdateBtn').addEventListener('click', async () => {
+    $('updateStatusText').textContent = 'Kontroluji…';
+    state.update = await api('/api/update?refresh=1');
+    renderUpdate();
+    if (!state.update.available) showToast('Máš nejnovější verzi');
+});
+
+$('clearHistoryBtn').addEventListener('click', async () => {
+    if (confirm('Smazat z historie všechny nepřipnuté položky?')) await api('/api/history/clear', {});
 });
 
 $('shutdownBtn').addEventListener('click', async () => {
@@ -568,15 +609,40 @@ $('applyPairingKey').addEventListener('click', async () => {
         await api('/api/pairing', { key });
         $('newPairingKey').value = '';
         loadPairingKey();
-        showToast('Spárováno – zařízení se do pár sekund objeví v seznamu');
+        showToast('Spárováno – zařízení se za pár sekund připojí');
     } catch (err) {
         showToast(`Kód nelze použít: ${err.message}`, 'error');
     }
 });
 
 // ==========================================
+// WINDOW CONTROLS (frameless desktop window)
+// ==========================================
+window.addEventListener('pywebviewready', () => {
+    $('windowControls').hidden = false;
+    if (state.node?.system === 'Darwin') document.documentElement.classList.add('mac-frameless');
+});
+$('minimizeBtn').addEventListener('click', () => window.pywebview?.api.minimize());
+$('closeBtn').addEventListener('click', () => window.pywebview?.api.close());
+// Buttons sit inside the drag region; keep a click on them from starting a window drag
+document.querySelectorAll('.titlebar button, .sheet-head button').forEach(b => b.addEventListener('mousedown', (e) => e.stopPropagation()));
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('lightbox').hidden) closeLightbox();
+    else if (!$('settingsSheet').hidden) closeSettings();
+});
+
+// ==========================================
 // INIT
 // ==========================================
+function renderAll() {
+    renderSettings();
+    renderDevices();
+    renderTimeline();
+    renderUpdate();
+}
+
 hydrateIcons();
 connect();
-setInterval(renderLists, 60000); // keeps relative times ("před 5 min") fresh
+setInterval(renderTimeline, 60000); // rolls "Dnes" over to "Včera" at midnight

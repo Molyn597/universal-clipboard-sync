@@ -66,15 +66,53 @@ def _is_app_quitting() -> bool:
     return False
 
 
+def _round_windows_corners(window):
+    """Frameless windows are square; Windows 11 rounds them (with shadow) when asked through DWM.
+    Older Windows ignores the attribute and keeps square corners."""
+    try:
+        import ctypes
+        dwmwa_window_corner_preference, dwmwcp_round = 33, 2
+        hwnd = int(window.native.Handle.ToInt64())
+        pref = ctypes.c_int(dwmwcp_round)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, dwmwa_window_corner_preference,
+                                                   ctypes.byref(pref), ctypes.sizeof(pref))
+    except Exception as e:
+        logger.debug(f"Could not round window corners: {e}")
+
+
+class WindowApi:
+    """Exposed to the page as window.pywebview.api for the custom title bar."""
+
+    def __init__(self):
+        self._window = None  # private: pywebview exposes public attributes to the page
+
+    def minimize(self):
+        self._window.minimize()
+
+    def close(self):
+        _hide_to_background(self._window)
+
+
+def _hide_to_background(window):
+    # A minimized window comes back when the Dock icon is clicked; a hidden one would not
+    target = window.minimize if sys.platform == "darwin" else window.hide
+    threading.Thread(target=target, daemon=True).start()
+
+
 def main():
     if _ping_running_instance():
         return
 
+    api = WindowApi()
     window = webview.create_window(
-        APP_NAME, APP_URL, width=1320, height=880, min_size=(900, 640),
+        APP_NAME, APP_URL, width=540, height=840, min_size=(440, 600),
         hidden="--hidden" in sys.argv,  # autostart at login goes straight to the tray
-        background_color="#080A0F",
+        frameless=True, easy_drag=False,  # the page draws its own title bar with a drag region
+        transparent=sys.platform == "darwin",  # macOS corners are rounded by the page itself
+        background_color="#0E0E11",
+        js_api=api,
     )
+    api._window = window
 
     def show_window():
         window.show()
@@ -85,16 +123,14 @@ def main():
         os._exit(0)
 
     def on_closing():
-        if sys.platform == "darwin":
-            if _is_app_quitting():
-                return True
-            # A minimized window comes back when the Dock icon is clicked; a hidden one would not
-            threading.Thread(target=window.minimize, daemon=True).start()
-        else:
-            threading.Thread(target=window.hide, daemon=True).start()
+        if sys.platform == "darwin" and _is_app_quitting():
+            return True
+        _hide_to_background(window)
         return False  # keep syncing in the background
 
     window.events.closing += on_closing
+    if sys.platform == "win32":
+        window.events.shown += lambda: _round_windows_corners(window)
 
     ready = threading.Event()
     state = {}

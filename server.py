@@ -20,6 +20,7 @@ from clipboard_engine import (
     MAX_FILE_SYNC_BYTES, RECEIVE_DIR, ClipboardEngine, ClipboardItem, file_item_from_paths, pack_files, unpack_files,
 )
 from p2p_sync import P2PManager
+from previews import file_preview, image_thumbnail
 from store import Store
 from updater import Updater
 from version import __version__
@@ -37,7 +38,6 @@ OUTBOX_DIR = DATA_DIR / "Odeslane"  # files dropped into the app are kept here s
 LOOPBACK = {"127.0.0.1", "::1"}
 PEER_ROUTES = {"/api/ping", "/api/sync"}  # the only endpoints reachable from other devices
 UPDATE_CHECK_INTERVAL = 6 * 3600
-THUMB_SIZE = (240, 240)
 
 Notifier = Callable[[str, str], None]
 
@@ -48,15 +48,12 @@ def _item_size(item: ClipboardItem) -> int:
     return int(item.metadata.get("size_bytes", 0))
 
 
-def _thumbnail(b64_png: str) -> str:
-    try:
-        img = Image.open(io.BytesIO(base64.b64decode(b64_png)))
-        img.thumbnail(THUMB_SIZE)
-        buf = io.BytesIO()
-        img.convert("RGBA").save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode("ascii")
-    except Exception:
-        return ""
+def _open(path: str):
+    """Opens a file in its default application."""
+    if sys.platform == "win32":
+        os.startfile(path)
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", path])
 
 
 def _reveal(path: str):
@@ -105,6 +102,8 @@ class ClipboardServer:
         r.add_post("/api/history/clear", self.handle_api_history_clear)
         r.add_post("/api/history/copy", self.handle_api_history_copy)
         r.add_post("/api/history/reveal", self.handle_api_history_reveal)
+        r.add_post("/api/history/open", self.handle_api_history_open)
+        r.add_get("/api/history/file", self.handle_api_history_file)
         r.add_post("/api/open-received", self.handle_api_open_received)
         r.add_get("/api/settings", self.handle_api_settings_get)
         r.add_post("/api/settings", self.handle_api_settings_set)
@@ -212,7 +211,10 @@ class ClipboardServer:
         """Records the item in history, writes it to the local clipboard (if remote) or sends it to peers."""
         item_dict = item.to_dict()
         if item.item_type == "image":
-            item_dict["metadata"] = {**item.metadata, "thumb": _thumbnail(item.data)}
+            item_dict["metadata"] = {**item.metadata, "thumb": await asyncio.to_thread(image_thumbnail, item.data)}
+        elif item.item_type == "file":
+            preview = await asyncio.to_thread(file_preview, item.data.splitlines())
+            item_dict["metadata"] = {**item.metadata, "preview": preview}
         size = _item_size(item)
         peers = self.p2p.get_active_peers_list()
 
@@ -385,13 +387,33 @@ class ClipboardServer:
         ok = await asyncio.to_thread(self.engine.write_local_clipboard, clip)
         return web.json_response({"status": "ok" if ok else "error"}, status=200 if ok else 500)
 
+    def _existing_paths(self, item: Optional[dict]) -> list:
+        if not item or item["type"] != "file":
+            return []
+        return [p for p in item.get("data", "").splitlines() if os.path.exists(p)]
+
     async def handle_api_history_reveal(self, request: web.Request):
         _, item = await self._json_hash(request)
-        paths = [p for p in (item or {}).get("data", "").splitlines() if os.path.exists(p)] if item and item["type"] == "file" else []
+        paths = self._existing_paths(item)
         if not paths:
             return web.json_response({"status": "error", "message": "Soubory už neexistují"}, status=404)
         _reveal(paths[0])
         return web.json_response({"status": "ok"})
+
+    async def handle_api_history_open(self, request: web.Request):
+        _, item = await self._json_hash(request)
+        paths = self._existing_paths(item)
+        if not paths:
+            return web.json_response({"status": "error", "message": "Soubory už neexistují"}, status=404)
+        _open(paths[0])
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_history_file(self, request: web.Request):
+        """Serves the first file of a history item for the full-size preview (localhost only)."""
+        paths = self._existing_paths(self.store.find(request.query.get("hash", "")))
+        if not paths or os.path.isdir(paths[0]):
+            raise web.HTTPNotFound()
+        return web.FileResponse(paths[0])
 
     async def handle_api_open_received(self, request: web.Request):
         RECEIVE_DIR.mkdir(parents=True, exist_ok=True)

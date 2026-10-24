@@ -193,7 +193,9 @@ class ClipboardEngine:
         self.max_history = max_history_hashes
         self.last_item: Optional[ClipboardItem] = None
         self._callbacks: List[Callable[[ClipboardItem], None]] = []
-        self._last_change_count: Optional[int] = None
+        # Start from the current clipboard state so whatever was copied before launch
+        # (e.g. a pairing key copied in a previous session) is not picked up and sent
+        self._last_change_count: Optional[int] = self._change_count()
         self._empty_reads = 0
         self._lock = threading.Lock()  # poll runs in a worker thread, writes in the event loop
 
