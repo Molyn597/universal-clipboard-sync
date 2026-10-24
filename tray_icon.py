@@ -15,7 +15,8 @@ except ImportError:
 logger = logging.getLogger("Tray")
 
 
-def setup_tray(on_open: Callable[[], None], on_quit: Callable[[], None]):
+def setup_tray(on_open: Callable[[], None], on_quit: Callable[[], None],
+               is_paused: Callable[[], bool], on_toggle_pause: Callable[[], None]):
     """System tray icon (Windows only); on macOS the Dock icon plays this role and
     pystray would fight pywebview for the Cocoa main thread."""
     if sys.platform != "win32" or not pystray:
@@ -23,6 +24,8 @@ def setup_tray(on_open: Callable[[], None], on_quit: Callable[[], None]):
     try:
         menu = pystray.Menu(
             pystray.MenuItem("Otevřít Universal Clipboard", lambda icon, item: on_open(), default=True),
+            pystray.MenuItem("Pozastavit synchronizaci", lambda icon, item: on_toggle_pause(),
+                             checked=lambda item: is_paused()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Ukončit", lambda icon, item: (icon.stop(), on_quit())),
         )

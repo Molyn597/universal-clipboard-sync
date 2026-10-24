@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 import os
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -34,6 +36,23 @@ def _ping_running_instance() -> bool:
             return True
     except Exception:
         return False
+
+
+def _set_paused(paused: bool):
+    """Goes through the local API so the dashboard and saved settings stay in sync."""
+    req = urllib.request.Request(
+        f"{APP_URL}/api/settings", method="POST", data=json.dumps({"paused": paused}).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    urllib.request.urlopen(req, timeout=2.0).close()
+
+
+def _mac_notify(title: str, message: str):
+    # Passed as argv so titles/messages can never break out of the AppleScript string
+    subprocess.Popen([
+        "osascript", "-e", "on run argv", "-e", "display notification (item 2 of argv) with title (item 1 of argv)",
+        "-e", "end run", title, message,
+    ])
 
 
 def _is_app_quitting() -> bool:
@@ -78,14 +97,30 @@ def main():
     window.events.closing += on_closing
 
     ready = threading.Event()
+    state = {}
+
+    def on_ready(server):
+        state["server"] = server
+        ready.set()
+
+    def notify(title: str, message: str):
+        if sys.platform == "darwin":
+            _mac_notify(title, message)
+        elif state.get("tray"):
+            state["tray"].notify(message, title)
+
+    def is_paused() -> bool:
+        return bool(state.get("server") and state["server"].store.settings["paused"])
+
     threading.Thread(
-        target=lambda: asyncio.run(start_server(DEFAULT_PORT, on_show=show_window, on_ready=ready.set)),
+        target=lambda: asyncio.run(start_server(DEFAULT_PORT, on_show=show_window, on_ready=on_ready, notifier=notify)),
         daemon=True,
     ).start()
     if not ready.wait(15):
         logger.error(f"Server did not start on port {DEFAULT_PORT}")
 
-    setup_tray(on_open=show_window, on_quit=quit_app)
+    state["tray"] = setup_tray(on_open=show_window, on_quit=quit_app,
+                               is_paused=is_paused, on_toggle_pause=lambda: _set_paused(not is_paused()))
     webview.start()
     os._exit(0)
 

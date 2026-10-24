@@ -1,219 +1,209 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Clipboard Sync • Win ⇄ Mac</title>
+    <title>Universal Clipboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- AMBIENT BACKGROUND GLOWS -->
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
-    <div class="ambient-glow glow-3"></div>
-
-    <div class="app-layout">
-        <!-- TOP HEADER -->
-        <header class="app-header">
-            <div class="brand-group">
-                <div class="brand-logo">
-                    <div class="logo-core">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                            <rect x="8" y="2" width="8" height="4" rx="1.5" ry="1.5"></rect>
-                            <path d="M12 11h4"></path>
-                            <path d="M12 16h4"></path>
-                            <path d="M8 11h.01"></path>
-                            <path d="M8 16h.01"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="brand-text">
-                    <div class="brand-title-row">
-                        <h1 class="brand-title">Universal Clipboard</h1>
-                        <span class="version-tag" id="versionTag">v–</span>
-                    </div>
-                    <p class="brand-desc">Zero-Latency Wi-Fi Bridge between Windows 10 & MacBook</p>
-                </div>
+    <div class="shell">
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <img class="sidebar-logo" src="/static/logo.svg" alt="Universal Clipboard">
+            <div class="nav-items">
+                <button class="nav-item active" data-view="dashboard"><span class="ico" data-icon="home"></span><span>Přehled</span></button>
+                <button class="nav-item" data-view="history"><span class="ico" data-icon="history"></span><span>Historie</span></button>
+                <button class="nav-item" data-view="devices"><span class="ico" data-icon="devices"></span><span>Zařízení</span></button>
+                <button class="nav-item" data-view="settings"><span class="ico" data-icon="settings"></span><span>Nastavení</span><i class="nav-dot" id="updateDot" hidden></i></button>
             </div>
-
-            <!-- NETWORK STATUS PILLS -->
-            <div class="header-status-group">
-                <div class="telemetry-item">
-                    <span class="telemetry-dot"></span>
-                    <span class="telemetry-label">Lokální uzel:</span>
-                    <strong class="telemetry-value" id="localDeviceName">Detekuji...</strong>
-                </div>
-
-                <div class="network-badge" id="peersBadge">
-                    <span class="radar-ping" id="peersIndicator"></span>
-                    <span class="network-status-text" id="peersStatusText">Hledám zařízení na Wi-Fi...</span>
-                </div>
-
-                <button id="pairingBtn" class="header-btn" title="Spárovat s dalším zařízením">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="7.5" cy="15.5" r="5.5"></circle>
-                        <path d="m21 2-9.6 9.6"></path>
-                        <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
-                    </svg>
-                    <span>Párování</span>
-                </button>
-
-                <button id="shutdownBtn" class="shutdown-btn" title="Ukončit aplikaci a synchronizační server">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-                        <line x1="12" y1="2" x2="12" y2="12"></line>
-                    </svg>
-                    <span>Ukončit</span>
-                </button>
+            <div class="sidebar-bottom">
+                <button class="icon-btn" id="pauseToggle" title="Pozastavit synchronizaci"><span class="ico" data-icon="pause"></span></button>
+                <button class="icon-btn" id="themeToggle" title="Přepnout vzhled"><span class="ico" data-icon="moon"></span></button>
+                <button class="version-link" id="versionLink">v–</button>
             </div>
-        </header>
+        </nav>
 
-        <!-- UPDATE BANNER -->
-        <div class="update-banner" id="updateBanner" hidden>
-            <span class="update-banner-text" id="updateBannerText"></span>
-            <div class="update-progress" id="updateProgress" hidden><div class="update-progress-bar" id="updateProgressBar"></div></div>
-            <button class="primary-action-btn" id="updateBtn">Aktualizovat</button>
-        </div>
+        <!-- MAIN -->
+        <div class="main">
+            <header class="topbar">
+                <label class="search">
+                    <span class="ico" data-icon="search"></span>
+                    <input id="searchInput" type="search" placeholder="Hledat v historii" autocomplete="off" spellcheck="false">
+                </label>
+                <div class="topbar-right">
+                    <button class="update-pill" id="updatePill" hidden><span class="ico" data-icon="download"></span><span id="updatePillText"></span></button>
+                    <div class="status-pill" id="statusPill"><i class="status-dot"></i><span id="statusText">Hledám zařízení…</span></div>
+                </div>
+            </header>
 
-        <!-- MAIN WORKSPACE -->
-        <main class="workspace-grid">
-            
-            <!-- LEFT COLUMN: SENDER & CONTROLS -->
-            <div class="column sender-column">
-                
-                <!-- CARD: DRAG & DROP / QUICK SHARE -->
-                <div class="glass-card sender-card">
-                    <div class="card-topbar">
-                        <div class="card-title-wrap">
-                            <span class="icon-chip">⚡</span>
-                            <h2>Odeslat do Schránky</h2>
+            <main class="panel">
+                <!-- DASHBOARD -->
+                <section class="view active" data-view="dashboard">
+                    <div class="cards">
+                        <div class="stat-card c-blue">
+                            <span class="stat-icon"><span class="ico" data-icon="arrow-up"></span></span>
+                            <div class="stat-value" id="statSent">0</div>
+                            <div class="stat-label">Odesláno <span id="statSentBytes"></span></div>
                         </div>
-                        <span class="micro-badge auto-badge">Auto Sync On</span>
+                        <div class="stat-card c-periwinkle">
+                            <span class="stat-icon"><span class="ico" data-icon="arrow-down"></span></span>
+                            <div class="stat-value" id="statReceived">0</div>
+                            <div class="stat-label">Přijato <span id="statReceivedBytes"></span></div>
+                        </div>
+                        <div class="stat-card c-lavender">
+                            <span class="stat-icon"><span class="ico" data-icon="devices"></span></span>
+                            <div class="stat-value" id="statPeers">0</div>
+                            <div class="stat-label" id="statPeersLabel">Připojená zařízení</div>
+                        </div>
+                        <div class="drop-card" id="dropCard">
+                            <span class="drop-icon"><span class="ico" data-icon="file-upload"></span></span>
+                            <div class="drop-hint">Soubory do 25 MB</div>
+                            <div class="drop-title">Přetáhni soubory sem nebo</div>
+                            <button class="pill-btn" id="browseBtn">Vybrat soubory</button>
+                            <input type="file" id="fileInput" multiple hidden>
+                        </div>
                     </div>
 
-                    <!-- DROPZONE -->
-                    <div class="dropzone" id="dropzone">
-                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                        <div class="dropzone-inner">
-                            <div class="drop-illustration">
-                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
-                                    <path d="M12 12v9"></path>
-                                    <path d="m8 17 4 4 4-4"></path>
-                                </svg>
+                    <div class="section-head">
+                        <h2>Poslední položky</h2>
+                        <button class="link-btn" data-goto="history">Zobrazit vše</button>
+                    </div>
+                    <div class="item-list" id="recentList"></div>
+                </section>
+
+                <!-- HISTORY -->
+                <section class="view" data-view="history">
+                    <div class="section-head">
+                        <h2>Historie</h2>
+                        <button class="link-btn danger" id="clearHistoryBtn">Vymazat nepřipnuté</button>
+                    </div>
+                    <div class="filters">
+                        <div class="segmented" id="dirFilter">
+                            <button class="active" data-value="all">Vše</button>
+                            <button data-value="sent"><span class="ico" data-icon="arrow-up"></span>Odesláno</button>
+                            <button data-value="received"><span class="ico" data-icon="arrow-down"></span>Přijato</button>
+                            <button data-value="pinned"><span class="ico" data-icon="pin"></span>Připnuté</button>
+                        </div>
+                        <div class="chips" id="typeFilter">
+                            <button class="active" data-value="all">Všechny typy</button>
+                            <button data-value="text">Text</button>
+                            <button data-value="image">Obrázky</button>
+                            <button data-value="file">Soubory</button>
+                        </div>
+                    </div>
+                    <div class="item-list" id="historyList"></div>
+                </section>
+
+                <!-- DEVICES -->
+                <section class="view" data-view="devices">
+                    <div class="section-head"><h2>Zařízení</h2></div>
+                    <div class="device-grid">
+                        <div class="box">
+                            <div class="box-title">Toto zařízení</div>
+                            <div class="device-row" id="ownDevice"></div>
+                            <div class="box-title spaced">Připojená zařízení</div>
+                            <div id="peerList"></div>
+                        </div>
+                        <div class="box">
+                            <div class="box-title">Párování</div>
+                            <p class="muted">Zařízení se propojí, když mají stejný párovací kód a jsou na stejné Wi-Fi. Zkopíruj kód tady a vlož ho na druhém zařízení.</p>
+                            <label class="field-label" for="ownPairingKey">Kód tohoto zařízení</label>
+                            <div class="field-row">
+                                <input type="password" id="ownPairingKey" class="field mono" readonly>
+                                <button class="pill-btn ghost" id="togglePairingKey">Zobrazit</button>
+                                <button class="pill-btn ghost" id="copyPairingKey">Kopírovat</button>
                             </div>
-                            <div class="drop-texts">
-                                <h3 class="drop-title">Přetáhni sem obrázek nebo screenshot</h3>
-                                <p class="drop-subtitle">nebo <button type="button" class="link-action" id="browseBtn">vyber soubor</button> • Podporuje i přímé <kbd>Ctrl+V</kbd></p>
+                            <label class="field-label" for="newPairingKey">Kód z jiného zařízení</label>
+                            <div class="field-row">
+                                <input type="text" id="newPairingKey" class="field mono" placeholder="Vlož párovací kód" spellcheck="false" autocomplete="off">
+                                <button class="pill-btn accent" id="applyPairingKey">Spárovat</button>
+                            </div>
+                            <p class="muted warn">Kód nikomu neposílej – kdo ho má, může číst tvou schránku.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SETTINGS -->
+                <section class="view" data-view="settings">
+                    <div class="section-head"><h2>Nastavení</h2></div>
+                    <div class="settings">
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Aktualizace</div>
+                                <div class="muted" id="updateStatusText">Verze –</div>
+                                <div class="progress" id="updateProgress" hidden><div id="updateProgressBar"></div></div>
+                            </div>
+                            <div class="setting-actions">
+                                <button class="pill-btn ghost" id="checkUpdateBtn">Zkontrolovat</button>
+                                <button class="pill-btn accent" id="installUpdateBtn" hidden>Aktualizovat</button>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- TEXT & CODE EDITOR -->
-                    <div class="editor-block">
-                        <div class="editor-header">
-                            <span class="editor-label">Text, URL nebo Kód</span>
-                            <span class="char-count" id="charCounter">0 znaků</span>
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Pozastavit synchronizaci</div>
+                                <div class="muted">Nic se neodesílá ani nepřijímá – třeba když kopíruješ hesla.</div>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="pausedSwitch"><span></span></label>
                         </div>
-                        <div class="textarea-wrapper">
-                            <textarea id="manualTextInput" placeholder="Napiš nebo vlož delší text, JSON, prompt nebo kód..." rows="5" spellcheck="false"></textarea>
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Oznámení</div>
+                                <div class="muted">Systémové upozornění, když něco přijde z jiného zařízení.</div>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="notificationsSwitch"><span></span></label>
                         </div>
-                        <div class="editor-footer">
-                            <span class="footer-tip">Stiskni <kbd>Ctrl</kbd> + <kbd>Enter</kbd> pro odeslání</span>
-                            <button id="sendTextBtn" class="primary-action-btn">
-                                <span>Odeslat do všech zařízení</span>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                </svg>
-                            </button>
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Vzhled</div>
+                                <div class="muted">Tmavý nebo světlý motiv.</div>
+                            </div>
+                            <div class="segmented small" id="themeSelect">
+                                <button data-value="dark">Tmavý</button>
+                                <button data-value="light">Světlý</button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- CARD: ACTIVE NETWORK NODES -->
-                <div class="glass-card peers-card">
-                    <div class="card-topbar">
-                        <div class="card-title-wrap">
-                            <span class="icon-chip">📡</span>
-                            <h3>Připojená Zařízení (<span id="activePeersCount">0</span>)</h3>
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Přijaté soubory</div>
+                                <div class="muted mono" id="receiveDir">–</div>
+                            </div>
+                            <button class="pill-btn ghost" id="openReceivedBtn">Otevřít složku</button>
                         </div>
-                        <span class="security-tag">🔒 Šifrovaná LAN</span>
-                    </div>
-                    <div class="peers-list" id="peersContainer">
-                        <div class="empty-peers-notice">
-                            <span class="empty-peers-icon">🔍</span>
-                            <p>Čekám na spuštění na MacBooku... Zařízení se na stejné Wi-Fi propojí automaticky.</p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- RIGHT COLUMN: LIVE CLIPBOARD FEED -->
-            <div class="column feed-column">
-                <div class="glass-card feed-card">
-                    <div class="feed-header">
-                        <div class="card-title-wrap">
-                            <span class="icon-chip">🕒</span>
-                            <h2>Historie Schránky</h2>
-                        </div>
-                        <div class="filter-pills">
-                            <button class="pill-btn active" data-filter="all">Vše</button>
-                            <button class="pill-btn" data-filter="text">Text & Kód</button>
-                            <button class="pill-btn" data-filter="image">Obrázky</button>
-                            <button class="pill-btn" data-filter="file">Soubory</button>
+                        <div class="setting">
+                            <div>
+                                <div class="setting-title">Ukončit aplikaci</div>
+                                <div class="muted">Zastaví synchronizaci, dokud aplikaci znovu nespustíš.</div>
+                            </div>
+                            <button class="pill-btn danger" id="shutdownBtn">Ukončit</button>
                         </div>
                     </div>
-
-                    <div class="feed-scroll-container" id="historyFeed">
-                        <!-- Injected via JS -->
-                        <div class="feed-empty-state">
-                            <div class="empty-halo">📋</div>
-                            <h3>Schránka je připravena</h3>
-                            <p>Zkopíruj cokoliv (<kbd>Ctrl+C</kbd> na Win / <kbd>Cmd+C</kbd> na Macu) a obsah se okamžitě objeví zde i na druhém zařízení.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- PAIRING MODAL -->
-    <div class="modal-backdrop" id="pairingModal" hidden>
-        <div class="glass-card modal-card" role="dialog" aria-labelledby="pairingTitle">
-            <div class="card-topbar">
-                <div class="card-title-wrap">
-                    <span class="icon-chip">🔑</span>
-                    <h2 id="pairingTitle">Párování zařízení</h2>
-                </div>
-                <button class="modal-close" id="pairingClose" aria-label="Zavřít">✕</button>
-            </div>
-            <p class="modal-hint">Zařízení se propojí, když mají stejný párovací kód a jsou na stejné Wi-Fi. Zkopíruj kód z tohoto zařízení a vlož ho na druhém.</p>
-
-            <label class="editor-label" for="ownPairingKey">Kód tohoto zařízení</label>
-            <div class="pairing-row">
-                <input type="password" id="ownPairingKey" class="pairing-input" readonly>
-                <button class="copy-action-btn" id="togglePairingKey">Zobrazit</button>
-                <button class="copy-action-btn" id="copyPairingKey">Kopírovat</button>
-            </div>
-
-            <label class="editor-label" for="newPairingKey">Vložit kód z jiného zařízení</label>
-            <div class="pairing-row">
-                <input type="text" id="newPairingKey" class="pairing-input" placeholder="Vlož párovací kód..." spellcheck="false" autocomplete="off">
-                <button class="primary-action-btn" id="applyPairingKey">Spárovat</button>
-            </div>
-            <p class="modal-hint warn">Kód nikomu neposílej – kdo ho má, může číst tvou schránku.</p>
+                </section>
+            </main>
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATIONS -->
-    <div id="toastContainer" class="toast-stack"></div>
+    <!-- COMPOSE -->
+    <button class="fab" id="composeBtn" title="Odeslat text"><span class="ico" data-icon="plus"></span></button>
+    <div class="modal" id="composeModal" hidden>
+        <div class="modal-card">
+            <div class="section-head">
+                <h2>Odeslat text</h2>
+                <button class="icon-btn" id="composeClose" aria-label="Zavřít"><span class="ico" data-icon="x"></span></button>
+            </div>
+            <textarea id="composeText" class="field mono" rows="7" placeholder="Text, odkaz nebo kód…" spellcheck="false"></textarea>
+            <div class="modal-foot">
+                <span class="muted"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> odešle</span>
+                <button class="pill-btn accent" id="composeSend">Odeslat do všech zařízení</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="drop-overlay" id="dropOverlay" hidden><div>Pusť soubory pro odeslání</div></div>
+    <div id="toasts" class="toasts"></div>
 
     <script src="/static/app.js"></script>
 </body>
