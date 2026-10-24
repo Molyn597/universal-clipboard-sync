@@ -335,3 +335,53 @@ input, textarea { font-family: inherit; color: inherit; }
 }
 .toast.error { background: var(--rose); color: var(--on-pastel); }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- FILE BROWSER ---------- */
+.files-toolbar { padding-top: 16px; }
+.files-path { display: flex; align-items: center; gap: 8px; padding: 10px 20px 4px; color: var(--text-2); }
+.files-path .mono { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.files-path .ico { width: 16px; height: 16px; }
+.file-grid {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); align-content: start; gap: 12px;
+    padding: 12px 20px 20px;
+}
+.file-card { background: var(--surface); border-radius: 16px; overflow: hidden; cursor: pointer; position: relative; transition: transform 0.12s; }
+.file-card:hover { transform: translateY(-2px); }
+.file-thumb { height: 120px; display: flex; align-items: center; justify-content: center; background: var(--raised); overflow: hidden; }
+.file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.file-thumb.pdf img { object-fit: cover; object-position: top; background: #FFFFFF; }
+.file-thumb .tile { width: 54px; height: 64px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--on-pastel); font-size: 0.6rem; font-weight: 700; }
+.file-thumb .tile .ico { width: 24px; height: 24px; }
+.file-info { padding: 10px 12px 12px; }
+.file-name { font-weight: 600; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-sub { font-size: 0.7rem; color: var(--text-2); margin-top: 2px; }
+.file-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
+.file-card:hover .file-actions { display: flex; }
+.file-actions button { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: rgba(14, 14, 17, 0.75); color: #FFFFFF; }
+.file-actions button:hover { background: rgba(14, 14, 17, 0.95); }
+.file-actions .ico { width: 15px; height: 15px; }
+
+/* ---------- IN-APP VIEWER ---------- */
+.lightbox-card { max-width: 1100px; height: 100%; }
+.lightbox-titles { flex: 1; min-width: 0; }
+.lightbox-sub { font-size: 0.72rem; color: var(--text-2); }
+.lightbox-head .chip-btn { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
+.lightbox-head .chip-btn .ico { width: 15px; height: 15px; }
+.lightbox-body { flex: 1; background: var(--panel); }
+.lightbox-body .center { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.lightbox-body .center img { max-height: calc(100vh - 140px); object-fit: contain; border-radius: 8px; }
+.pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px; }
+.pdf-pages img { width: min(100%, 860px); min-height: 200px; background: #FFFFFF; border-radius: 6px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25); }
+.lightbox-body video { max-width: 100%; max-height: calc(100vh - 140px); border-radius: 10px; }
+.lightbox-body audio { width: min(100%, 520px); }
+.folder-list { padding: 10px; }
+.folder-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; text-align: left; }
+.folder-row:hover { background: var(--hover); }
+.folder-row .ico { color: var(--text-2); }
+.folder-row .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.no-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; color: var(--text-2); }
+.no-preview .tile { width: 84px; height: 100px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--on-pastel); font-weight: 700; }
+.no-preview .tile .ico { width: 34px; height: 34px; }

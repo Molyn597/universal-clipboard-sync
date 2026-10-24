@@ -71,7 +71,7 @@ const state = {
     search: '',
 };
 let ws = null;
-let lightboxItem = null;
+let currentView = 'clipboard';
 
 const $ = (id) => document.getElementById(id);
 
@@ -140,13 +140,16 @@ function handleEvent(data) {
             Object.assign(state, {
                 node: data.node, version: data.version, peers: data.peers || [], history: data.history || [],
                 settings: data.settings, update: data.update, receiveDir: data.receive_dir,
+                defaultReceiveDir: data.default_receive_dir,
             });
             if (data.node?.system === 'Darwin' && window.pywebview) document.documentElement.classList.add('mac-frameless');
             renderAll();
+            renderTimeline({ scroll: 'bottom' });
             break;
         case 'clipboard_item':
             state.history = [data.item, ...state.history.filter(i => i.hash !== data.item.hash)];
-            renderTimeline();
+            renderTimeline({ scroll: data.from_remote ? 'follow' : 'bottom' });
+            if (currentView === 'files' && data.item.type === 'file') loadFiles();
             if (data.item.metadata?.too_large) showToast('Soubory jsou větší než 25 MB, neodeslány', 'error');
             break;
         case 'history':
@@ -160,7 +163,9 @@ function handleEvent(data) {
             break;
         case 'settings':
             state.settings = data.settings;
+            if (data.receive_dir) state.receiveDir = data.receive_dir;
             renderSettings();
+            if (currentView === 'files') loadFiles();
             break;
         case 'update_status':
             state.update = data.update;
@@ -253,7 +258,7 @@ function previewHtml(item) {
     }
     const ext = first.is_dir ? '' : (first.name.includes('.') ? first.name.split('.').pop().slice(0, 4).toUpperCase() : '');
     const tile = `<span class="tile" style="background:${kind.color}">${icon(kind.icon)}${escapeHtml(ext)}</span>`;
-    const head = `<div class="pv-file">${tile}<div style="min-width:0"><div class="cap-name">${escapeHtml(first.name)}</div><div class="cap-sub">${kind.label} · ${sizeText}</div></div></div>`;
+    const head = `<div class="pv-file" data-action="view" style="cursor:zoom-in">${tile}<div style="min-width:0"><div class="cap-name">${escapeHtml(first.name)}</div><div class="cap-sub">${kind.label} · ${sizeText}</div></div></div>`;
     const snippet = p.kind === 'text' && p.snippet ? `<div class="pv-snippet" data-action="view">${escapeHtml(p.snippet)}</div>` : '';
     return `${head}${snippet}${more}`;
 }
@@ -295,10 +300,13 @@ function searchText(item) {
     return [m.filename, ...(m.files || []).map(f => f.name), m.preview?.snippet].filter(Boolean).join(' ');
 }
 
-function renderTimeline() {
+function renderTimeline({ scroll = 'keep' } = {}) {
+    const tl = $('timeline');
+    const nearBottom = tl.scrollHeight - tl.scrollTop - tl.clientHeight < 80;
     const q = state.search.trim().toLowerCase();
+    // Oldest first, newest at the bottom next to the composer, like a chat
     const items = [...state.history]
-        .sort((a, b) => b.timestamp - a.timestamp)
+        .sort((a, b) => a.timestamp - b.timestamp)
         .filter(i => state.dir === 'all' || (state.dir === 'pinned' ? i.pinned : i.direction === state.dir))
         .filter(i => !q || `${searchText(i)} ${i.device || ''}`.toLowerCase().includes(q));
 
@@ -312,43 +320,126 @@ function renderTimeline() {
         return;
     }
     let lastDay = '';
-    $('timeline').innerHTML = items.map(item => {
+    const prevTop = tl.scrollTop;
+    tl.innerHTML = items.map(item => {
         const day = dayLabel(item.timestamp);
         const sep = day !== lastDay ? `<div class="day">${day}</div>` : '';
         lastDay = day;
         return sep + messageHtml(item);
     }).join('');
+    if (scroll === 'bottom' || (scroll === 'follow' && nearBottom)) scrollTimelineToBottom();
+    else tl.scrollTop = prevTop;
+}
+
+function scrollTimelineToBottom() {
+    const tl = $('timeline');
+    tl.scrollTop = tl.scrollHeight;
+    // Thumbnails finish loading after the first layout and push the content down
+    tl.querySelectorAll('img').forEach(img => { if (!img.complete) img.addEventListener('load', () => { tl.scrollTop = tl.scrollHeight; }, { once: true }); });
 }
 
 // ==========================================
-// ITEM ACTIONS & FULL-SIZE PREVIEW
+// IN-APP VIEWER (history items and files)
 // ==========================================
-function openLightbox(item) {
-    lightboxItem = item;
-    const m = item.metadata || {};
-    let title = 'Text', body;
-    if (item.type === 'text') {
-        body = `<pre>${escapeHtml(item.data)}</pre>`;
-    } else if (item.type === 'image') {
-        title = m.filename || `Obrázek ${m.width}×${m.height}`;
-        body = `<img src="data:image/png;base64,${item.data || m.thumb}" alt="">`;
-    } else {
-        const p = m.preview || {};
-        title = m.files?.[0]?.name || 'Soubor';
-        if (p.kind === 'image') body = `<img src="/api/history/file?hash=${item.hash}" alt="">`;
-        else if (p.kind === 'pdf') body = `<img src="data:image/png;base64,${p.thumb}" alt="">`;
-        else body = `<pre>${escapeHtml(p.snippet || '')}</pre>`;
-    }
+const viewer = { item: null, path: null, stack: [] };
+const enc = encodeURIComponent;
+
+function showViewer(title, sub, body, { path = null } = {}) {
+    viewer.path = path;
     $('lightboxTitle').textContent = title;
+    $('lightboxSub').textContent = sub;
     $('lightboxBody').innerHTML = body;
+    $('viewerOpen').hidden = !path;
+    $('viewerReveal').hidden = !path;
+    $('viewerBack').hidden = viewer.stack.length === 0;
     $('lightbox').hidden = false;
+}
+
+function openLightbox(item) {
+    viewer.item = item;
+    viewer.stack = [];
+    const m = item.metadata || {};
+    if (item.type === 'file') {
+        const first = (item.data || '').split('\n')[0];
+        if (first) return openFileViewer(first);
+    }
+    if (item.type === 'image') {
+        showViewer(m.filename || 'Obrázek ze schránky', `${m.width}×${m.height} px · ${formatBytes(m.size_bytes)}`,
+            `<div class="center"><img src="data:image/png;base64,${item.data || m.thumb}" alt=""></div>`);
+    } else {
+        showViewer(isUrl(item.data) ? 'Odkaz' : 'Text', `${item.data.length} znaků`, `<pre>${escapeHtml(item.data)}</pre>`);
+    }
+}
+
+async function openFileViewer(path, { push = false } = {}) {
+    if (push && viewer.path) viewer.stack.push(viewer.path);
+    let info;
+    try {
+        info = await api(`/api/files/info?path=${enc(path)}`);
+    } catch (err) {
+        showToast('Soubor už neexistuje', 'error');
+        return;
+    }
+    const kind = FILE_KINDS[info.kind] || FILE_KINDS.file;
+    const raw = `/api/files/raw?path=${enc(path)}`;
+    let sub = `${kind.label} · ${info.is_dir ? `${info.children?.length || 0} položek` : formatBytes(info.size)}`;
+    let body;
+    switch (info.kind) {
+        case 'image':
+            body = `<div class="center"><img src="${raw}" alt=""></div>`;
+            break;
+        case 'pdf':
+            sub += ` · ${info.pages} ${info.pages === 1 ? 'strana' : info.pages < 5 ? 'strany' : 'stran'}`;
+            body = `<div class="pdf-pages">${Array.from({ length: info.pages }, (_, i) =>
+                `<img loading="lazy" src="/api/files/pdf-page?path=${enc(path)}&page=${i}" alt="Strana ${i + 1}">`).join('')}</div>`;
+            break;
+        case 'text': {
+            const { text, truncated } = await api(`/api/files/text?path=${enc(path)}`);
+            body = `<pre>${escapeHtml(text)}${truncated ? '\n\n… (zkráceno, celý soubor otevři tlačítkem Otevřít)' : ''}</pre>`;
+            break;
+        }
+        case 'video':
+            body = `<div class="center"><video controls src="${raw}"></video></div>`;
+            break;
+        case 'audio':
+            body = `<div class="center"><audio controls src="${raw}"></audio></div>`;
+            break;
+        case 'folder':
+            body = `<div class="folder-list">${(info.children || []).map(c => `
+                <button class="folder-row" data-path="${escapeHtml(c.path)}">${icon(c.is_dir ? 'folder' : (FILE_KINDS[c.kind] || FILE_KINDS.file).icon)}
+                    <span class="grow">${escapeHtml(c.name)}</span><span class="muted">${c.is_dir ? '' : formatBytes(c.size)}</span></button>`).join('')
+                || '<div class="muted" style="padding:12px">Složka je prázdná.</div>'}</div>`;
+            break;
+        default: {
+            const ext = info.name.includes('.') ? info.name.split('.').pop().slice(0, 4).toUpperCase() : '';
+            body = `<div class="center"><div class="no-preview">
+                <span class="tile" style="background:${kind.color}">${icon(kind.icon)}${escapeHtml(ext)}</span>
+                <div>Náhled tohoto typu souboru v aplikaci zobrazit nejde.</div>
+                <button class="chip-btn accent" data-viewer-open>Otevřít v aplikaci</button></div></div>`;
+        }
+    }
+    showViewer(info.name, sub, body, { path });
 }
 
 function closeLightbox() {
     $('lightbox').hidden = true;
-    $('lightboxBody').innerHTML = '';
-    lightboxItem = null;
+    $('lightboxBody').innerHTML = '';  // stops audio/video playback
+    viewer.item = null;
+    viewer.path = null;
+    viewer.stack = [];
 }
+
+$('lightboxBody').addEventListener('click', (e) => {
+    const row = e.target.closest('.folder-row');
+    if (row) openFileViewer(row.dataset.path, { push: true });
+    if (e.target.closest('[data-viewer-open]')) api('/api/files/open', { path: viewer.path });
+});
+$('viewerBack').addEventListener('click', () => {
+    const prev = viewer.stack.pop();
+    if (prev) openFileViewer(prev);
+});
+$('viewerOpen').addEventListener('click', () => api('/api/files/open', { path: viewer.path }).catch(err => showToast(err.message, 'error')));
+$('viewerReveal').addEventListener('click', () => api('/api/files/reveal', { path: viewer.path }).catch(err => showToast(err.message, 'error')));
 
 async function copyItem(hash) {
     await api('/api/history/copy', { hash });
@@ -378,7 +469,117 @@ $('timeline').addEventListener('click', async (e) => {
 $('lightboxClose').addEventListener('click', closeLightbox);
 $('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
 $('lightboxCopy').addEventListener('click', async () => {
-    if (lightboxItem) await copyItem(lightboxItem.hash).catch(err => showToast(err.message, 'error'));
+    try {
+        if (viewer.path) await api('/api/files/copy', { path: viewer.path });
+        else if (viewer.item) await api('/api/history/copy', { hash: viewer.item.hash });
+        showToast('Zkopírováno do schránky');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+// ==========================================
+// FILES PAGE
+// ==========================================
+let fileScope = 'received';
+let fileList = [];
+
+async function loadFiles() {
+    try {
+        const data = await api(`/api/files?scope=${fileScope}`);
+        fileList = data.files;
+        $('filesDir').textContent = fileScope === 'received' ? data.dir : 'Soubory, které jsi odeslal z tohoto zařízení';
+        $('filesOpenDir').hidden = fileScope !== 'received';
+        $('filesChangeDir').hidden = fileScope !== 'received';
+        renderFiles();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+function fileCardHtml(f) {
+    const kind = FILE_KINDS[f.kind] || FILE_KINDS.file;
+    const ext = f.is_dir ? '' : (f.name.includes('.') ? f.name.split('.').pop().slice(0, 4).toUpperCase() : '');
+    const tile = `<span class="tile" style="background:${kind.color}">${icon(kind.icon)}${escapeHtml(ext)}</span>`;
+    const visual = f.kind === 'image' || f.kind === 'pdf'
+        ? `<img loading="lazy" src="/api/files/thumb?path=${enc(f.path)}" alt="" onerror="this.remove()">`
+        : tile;
+    const date = new Date(f.mtime * 1000).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `
+        <div class="file-card" data-path="${escapeHtml(f.path)}">
+            <div class="file-thumb ${f.kind}">${visual}</div>
+            <div class="file-actions">
+                <button data-file-action="copy" title="Kopírovat do schránky">${icon('copy')}</button>
+                <button data-file-action="send" title="Odeslat znovu">${icon('arrow-up')}</button>
+                <button data-file-action="reveal" title="Zobrazit ve složce">${icon('folder')}</button>
+            </div>
+            <div class="file-info">
+                <div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                <div class="file-sub">${f.is_dir ? 'Složka' : formatBytes(f.size)} · ${date}</div>
+            </div>
+        </div>`;
+}
+
+function renderFiles() {
+    const q = $('fileSearch').value.trim().toLowerCase();
+    const files = fileList.filter(f => !q || f.name.toLowerCase().includes(q));
+    $('fileGrid').innerHTML = files.length
+        ? files.map(fileCardHtml).join('')
+        : `<div class="empty" style="grid-column:1/-1">${icon('folder')}<h3>${q ? 'Nic nenalezeno' : 'Zatím tu nejsou žádné soubory'}</h3>
+            <p>${fileScope === 'received' ? 'Soubory poslané z druhého zařízení se uloží sem.' : 'Tady uvidíš soubory, které jsi zkopíroval nebo přetáhl do aplikace.'}</p></div>`;
+}
+
+$('fileGrid').addEventListener('click', async (e) => {
+    const card = e.target.closest('.file-card');
+    if (!card) return;
+    const path = card.dataset.path;
+    const action = e.target.closest('[data-file-action]')?.dataset.fileAction;
+    try {
+        if (action === 'copy') { await api('/api/files/copy', { path }); showToast('Zkopírováno do schránky'); }
+        else if (action === 'send') { await api('/api/files/send', { path }); showToast('Odesláno'); }
+        else if (action === 'reveal') await api('/api/files/reveal', { path });
+        else { viewer.stack = []; viewer.item = null; openFileViewer(path); }
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
+$('fileScope').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    fileScope = btn.dataset.value;
+    $('fileScope').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    loadFiles();
+});
+$('fileSearch').addEventListener('input', renderFiles);
+$('filesOpenDir').addEventListener('click', () => api('/api/open-received', {}));
+$('filesChangeDir').addEventListener('click', () => chooseReceiveDir());
+
+// ==========================================
+// RECEIVE FOLDER
+// ==========================================
+async function chooseReceiveDir() {
+    let folder;
+    if (window.pywebview?.api?.choose_folder) folder = await window.pywebview.api.choose_folder(state.receiveDir);
+    else folder = prompt('Cesta ke složce pro přijaté soubory:', state.receiveDir);
+    if (!folder) return;
+    try {
+        const res = await api('/api/settings', { receive_dir: folder });
+        state.settings = res;
+        state.receiveDir = res.effective_receive_dir;
+        renderSettings();
+        showToast('Přijaté soubory se teď ukládají do nové složky');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+$('changeReceiveDirBtn').addEventListener('click', chooseReceiveDir);
+$('resetReceiveDirBtn').addEventListener('click', async () => {
+    const res = await api('/api/settings', { receive_dir: '' });
+    state.settings = res;
+    state.receiveDir = res.effective_receive_dir;
+    renderSettings();
 });
 
 // ==========================================
@@ -481,9 +682,11 @@ window.addEventListener('paste', (e) => {
 // ==========================================
 // NAVIGATION
 // ==========================================
-const VIEW_TITLES = { clipboard: 'Schránka', devices: 'Zařízení', settings: 'Nastavení' };
+const VIEW_TITLES = { clipboard: 'Schránka', files: 'Soubory', devices: 'Zařízení', settings: 'Nastavení' };
 
 function showView(view) {
+    currentView = view;
+    if (view === 'files') loadFiles();
     document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === view));
     $('viewTitle').textContent = VIEW_TITLES[view];
@@ -528,6 +731,8 @@ function renderSettings() {
     $('pausedSwitch').checked = s.paused;
     $('notificationsSwitch').checked = s.notifications;
     $('receiveDir').textContent = state.receiveDir || '–';
+    $('receiveDir').title = state.receiveDir || '';
+    $('resetReceiveDirBtn').hidden = !s.receive_dir;
     renderBridge();
 }
 

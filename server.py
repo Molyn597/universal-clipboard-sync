@@ -20,7 +20,7 @@ from clipboard_engine import (
     MAX_FILE_SYNC_BYTES, RECEIVE_DIR, ClipboardEngine, ClipboardItem, file_item_from_paths, pack_files, unpack_files,
 )
 from p2p_sync import P2PManager
-from previews import file_preview, image_thumbnail
+from previews import MAX_PDF_PAGES, file_kind, file_preview, image_thumbnail, pdf_page_count, pdf_page_png, thumbnail_png
 from store import Store
 from updater import Updater
 from version import __version__
@@ -38,8 +38,19 @@ OUTBOX_DIR = DATA_DIR / "Odeslane"  # files dropped into the app are kept here s
 LOOPBACK = {"127.0.0.1", "::1"}
 PEER_ROUTES = {"/api/ping", "/api/sync"}  # the only endpoints reachable from other devices
 UPDATE_CHECK_INTERVAL = 6 * 3600
+MAX_LISTED_FILES = 300
+MAX_TEXT_PREVIEW_BYTES = 1024 * 1024
 
 Notifier = Callable[[str, str], None]
+
+
+def _entry(path: Path) -> dict:
+    stat = path.stat()
+    is_dir = path.is_dir()
+    return {
+        "path": str(path), "name": path.name, "is_dir": is_dir, "kind": file_kind(str(path)),
+        "size": 0 if is_dir else stat.st_size, "mtime": stat.st_mtime,
+    }
 
 
 def _item_size(item: ClipboardItem) -> int:
@@ -105,6 +116,16 @@ class ClipboardServer:
         r.add_post("/api/history/open", self.handle_api_history_open)
         r.add_get("/api/history/file", self.handle_api_history_file)
         r.add_post("/api/open-received", self.handle_api_open_received)
+        r.add_get("/api/files", self.handle_api_files)
+        r.add_get("/api/files/info", self.handle_api_files_info)
+        r.add_get("/api/files/raw", self.handle_api_files_raw)
+        r.add_get("/api/files/text", self.handle_api_files_text)
+        r.add_get("/api/files/thumb", self.handle_api_files_thumb)
+        r.add_get("/api/files/pdf-page", self.handle_api_files_pdf_page)
+        r.add_post("/api/files/open", self.handle_api_files_open)
+        r.add_post("/api/files/reveal", self.handle_api_files_reveal)
+        r.add_post("/api/files/copy", self.handle_api_files_copy)
+        r.add_post("/api/files/send", self.handle_api_files_send)
         r.add_get("/api/settings", self.handle_api_settings_get)
         r.add_post("/api/settings", self.handle_api_settings_set)
         r.add_get("/api/pairing", self.handle_api_pairing_get)
@@ -140,6 +161,40 @@ class ClipboardServer:
         return self.p2p.unseal(await request.read())
 
     @property
+    def receive_dir(self) -> Path:
+        return Path(self.store.settings["receive_dir"]) if self.store.settings["receive_dir"] else RECEIVE_DIR
+
+    def _history_paths(self, direction: Optional[str] = None) -> list:
+        return [Path(p) for h in self.store.history
+                if h["type"] == "file" and (direction is None or h.get("direction") == direction)
+                for p in h.get("data", "").splitlines()]
+
+    def _allowed_path(self, raw: str) -> Optional[Path]:
+        """The file API may only touch the received/sent folders and files that appear in history,
+        never arbitrary paths on disk."""
+        if not raw:
+            return None
+        path = Path(raw).resolve()
+        if not path.exists():
+            return None
+        roots = [self.receive_dir.resolve(), OUTBOX_DIR.resolve(), *(p.resolve() for p in self._history_paths())]
+        if any(path == root or root in path.parents for root in roots):
+            return path
+        return None
+
+    def _query_path(self, request: web.Request) -> Path:
+        path = self._allowed_path(request.query.get("path", ""))
+        if not path:
+            raise web.HTTPNotFound()
+        return path
+
+    async def _body_path(self, request: web.Request) -> Path:
+        path = self._allowed_path((await request.json()).get("path", ""))
+        if not path:
+            raise web.HTTPNotFound()
+        return path
+
+    @property
     def node_info(self) -> dict:
         return {"id": self.p2p.node_id, "name": self.p2p.hostname, "system": self.p2p.system, "port": self.port}
 
@@ -163,7 +218,8 @@ class ClipboardServer:
                 "stats": self.store.stats,
                 "settings": self.store.settings,
                 "update": self.updater.status(),
-                "receive_dir": str(RECEIVE_DIR),
+                "receive_dir": str(self.receive_dir),
+                "default_receive_dir": str(RECEIVE_DIR),
             })
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
@@ -274,7 +330,7 @@ class ClipboardServer:
             if item.item_type == "file":
                 if not data.get("packed"):
                     return web.json_response({"status": "error", "message": "File contents missing"}, status=400)
-                saved = await asyncio.to_thread(unpack_files, data["packed"])
+                saved = await asyncio.to_thread(unpack_files, data["packed"], self.receive_dir)
                 logger.info(f"Saved {len(saved)} incoming file(s) to {os.path.dirname(saved[0])}")
                 item = file_item_from_paths(saved, item_hash=item.hash)
             from_peer = request.remote not in LOOPBACK or request.content_type != "application/json"
@@ -416,18 +472,104 @@ class ClipboardServer:
         return web.FileResponse(paths[0])
 
     async def handle_api_open_received(self, request: web.Request):
-        RECEIVE_DIR.mkdir(parents=True, exist_ok=True)
-        _reveal(str(RECEIVE_DIR))
+        self.receive_dir.mkdir(parents=True, exist_ok=True)
+        _reveal(str(self.receive_dir))
         return web.json_response({"status": "ok"})
 
     async def handle_api_settings_get(self, request: web.Request):
         return web.json_response(self.store.settings)
 
     async def handle_api_settings_set(self, request: web.Request):
-        self.store.update_settings(await request.json())
-        await self.broadcast_ws({"event": "settings", "settings": self.store.settings})
+        changes = await request.json()
+        if changes.get("receive_dir"):
+            target = Path(changes["receive_dir"]).expanduser()
+            try:
+                if not target.is_absolute():
+                    raise ValueError
+                target.mkdir(parents=True, exist_ok=True)
+            except (OSError, ValueError):
+                return web.json_response({"status": "error", "message": "Do této složky nejde ukládat"}, status=400)
+            changes["receive_dir"] = str(target)
+        self.store.update_settings(changes)
+        await self.broadcast_ws({"event": "settings", "settings": self.store.settings, "receive_dir": str(self.receive_dir)})
         await self._persist()
-        return web.json_response(self.store.settings)
+        return web.json_response({**self.store.settings, "effective_receive_dir": str(self.receive_dir)})
+
+    # ----------------- FILE BROWSER & VIEWER -----------------
+    def _list_files(self, scope: str) -> list:
+        if scope == "received":
+            candidates = list(self.receive_dir.iterdir()) if self.receive_dir.exists() else []
+        else:
+            outbox = [p for d in OUTBOX_DIR.iterdir() if d.is_dir() for p in d.iterdir()] if OUTBOX_DIR.exists() else []
+            candidates = outbox + self._history_paths("sent")
+        seen, entries = set(), []
+        for path in candidates:
+            key = str(path.resolve()) if path.exists() else None
+            if key and key not in seen and not path.name.startswith("."):
+                seen.add(key)
+                entries.append(_entry(path))
+        entries.sort(key=lambda e: e["mtime"], reverse=True)
+        return entries[:MAX_LISTED_FILES]
+
+    async def handle_api_files(self, request: web.Request):
+        scope = request.query.get("scope", "received")
+        files = await asyncio.to_thread(self._list_files, scope)
+        return web.json_response({"files": files, "dir": str(self.receive_dir if scope == "received" else OUTBOX_DIR)})
+
+    async def handle_api_files_info(self, request: web.Request):
+        path = self._query_path(request)
+        info = _entry(path)
+        if info["kind"] == "pdf":
+            info["pages"] = min(await asyncio.to_thread(pdf_page_count, str(path)), MAX_PDF_PAGES)
+        if path.is_dir():
+            info["children"] = [_entry(p) for p in sorted(path.iterdir())[:200]]
+        return web.json_response(info)
+
+    async def handle_api_files_raw(self, request: web.Request):
+        path = self._query_path(request)
+        if path.is_dir():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path)
+
+    async def handle_api_files_text(self, request: web.Request):
+        path = self._query_path(request)
+        with open(path, "rb") as fh:
+            raw = fh.read(MAX_TEXT_PREVIEW_BYTES + 1)
+        text = raw[:MAX_TEXT_PREVIEW_BYTES].decode("utf-8", errors="replace")
+        return web.json_response({"text": text, "truncated": len(raw) > MAX_TEXT_PREVIEW_BYTES})
+
+    async def handle_api_files_thumb(self, request: web.Request):
+        png = await asyncio.to_thread(thumbnail_png, str(self._query_path(request)))
+        if not png:
+            raise web.HTTPNotFound()
+        return web.Response(body=png, content_type="image/png", headers={"Cache-Control": "max-age=3600"})
+
+    async def handle_api_files_pdf_page(self, request: web.Request):
+        path = self._query_path(request)
+        page = int(request.query.get("page", 0))
+        png = await asyncio.to_thread(pdf_page_png, str(path), page)
+        return web.Response(body=png, content_type="image/png", headers={"Cache-Control": "max-age=3600"})
+
+    async def handle_api_files_open(self, request: web.Request):
+        _open(str(await self._body_path(request)))
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_files_reveal(self, request: web.Request):
+        _reveal(str(await self._body_path(request)))
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_files_copy(self, request: web.Request):
+        """Puts the file on the local clipboard only (marked as seen, so it is not re-sent)."""
+        path = await self._body_path(request)
+        item = await asyncio.to_thread(file_item_from_paths, [str(path)])
+        await asyncio.to_thread(self.engine.write_local_clipboard, item)
+        return web.json_response({"status": "ok"})
+
+    async def handle_api_files_send(self, request: web.Request):
+        path = await self._body_path(request)
+        item = await asyncio.to_thread(file_item_from_paths, [str(path)])
+        await self.process_and_broadcast_item(item, from_remote=False)
+        return web.json_response({"status": "ok"})
 
     async def handle_api_pairing_get(self, request: web.Request):
         return web.json_response({"key": self.p2p.sync_key})

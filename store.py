@@ -13,7 +13,7 @@ STATE_FILE = DATA_DIR / "state.json"
 MAX_UNPINNED = 50
 MAX_PERSISTED_IMAGE_B64 = 4 * 1024 * 1024  # larger screenshots stay in memory only; the row keeps its thumbnail
 
-DEFAULT_SETTINGS = {"theme": "dark", "paused": False, "notifications": True}
+DEFAULT_SETTINGS = {"theme": "dark", "paused": False, "notifications": True, "receive_dir": ""}
 DEFAULT_STATS = {"sent_count": 0, "sent_bytes": 0, "received_count": 0, "received_bytes": 0}
 
 

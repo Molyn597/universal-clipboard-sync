@@ -90,6 +90,10 @@ class WindowApi:
     def minimize(self):
         self._window.minimize()
 
+    def choose_folder(self, current: str = ""):
+        result = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=current or "")
+        return result[0] if result else None
+
     def toggle_maximize(self):
         self._window.restore() if self._maximized else self._window.maximize()
         self._maximized = not self._maximized

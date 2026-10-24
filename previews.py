@@ -26,6 +26,50 @@ KIND_BY_EXT = {
     **{e: "video" for e in (".mp4", ".mov", ".mkv", ".avi", ".webm")},
 }
 SNIPPET_CHARS = 600
+MAX_PDF_PAGES = 60  # the in-app viewer renders at most this many pages
+
+
+def file_kind(path: str) -> str:
+    if os.path.isdir(path):
+        return "folder"
+    ext = os.path.splitext(path)[1].lower()
+    if ext in IMAGE_EXTS:
+        return "image"
+    if ext == ".pdf":
+        return "pdf"
+    if ext in TEXT_EXTS:
+        return "text"
+    return KIND_BY_EXT.get(ext, "file")
+
+
+def pdf_page_count(path: str) -> int:
+    if not pdfium:
+        return 0
+    pdf = pdfium.PdfDocument(path)
+    try:
+        return len(pdf)
+    finally:
+        pdf.close()
+
+
+def pdf_page_png(path: str, index: int, width: int = 1100) -> bytes:
+    pdf = pdfium.PdfDocument(path)
+    try:
+        page = pdf[index]
+        image = page.render(scale=width / max(page.get_width(), 1)).to_pil()
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return buf.getvalue()
+    finally:
+        pdf.close()
+
+
+def thumbnail_png(path: str) -> Optional[bytes]:
+    """Small PNG for the file browser grid; None when the file type has no visual preview."""
+    preview = file_preview([path])
+    if not preview or not preview.get("thumb"):
+        return None
+    return base64.b64decode(preview["thumb"])
 
 
 def _encode(img: Image.Image) -> str:

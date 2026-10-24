@@ -16,6 +16,7 @@
             <img class="sidebar-logo" src="/static/logo.svg" alt="Universal Clipboard">
             <div class="nav-items">
                 <button class="nav-item active" data-view="clipboard"><span class="ico" data-icon="clipboard"></span><span>Schránka</span></button>
+                <button class="nav-item" data-view="files"><span class="ico" data-icon="folder"></span><span>Soubory</span></button>
                 <button class="nav-item" data-view="devices"><span class="ico" data-icon="devices"></span><span>Zařízení</span></button>
                 <button class="nav-item" data-view="settings"><span class="ico" data-icon="settings"></span><span>Nastavení</span><i class="nav-dot" id="updateDot" hidden></i></button>
             </div>
@@ -63,6 +64,27 @@
                         <button class="composer-btn send" id="sendBtn" title="Odeslat (Enter)"><span class="ico" data-icon="arrow-up"></span></button>
                         <input type="file" id="fileInput" multiple hidden>
                     </footer>
+                </section>
+
+                <!-- FILES -->
+                <section class="view" data-view="files">
+                    <div class="toolbar files-toolbar">
+                        <div class="segmented" id="fileScope">
+                            <button class="active" data-value="received"><span class="ico" data-icon="arrow-down"></span>Přijaté</button>
+                            <button data-value="sent"><span class="ico" data-icon="arrow-up"></span>Odeslané</button>
+                        </div>
+                        <label class="search">
+                            <span class="ico" data-icon="search"></span>
+                            <input id="fileSearch" type="search" placeholder="Hledat soubor" autocomplete="off" spellcheck="false">
+                        </label>
+                    </div>
+                    <div class="files-path">
+                        <span class="ico" data-icon="folder"></span>
+                        <span class="mono small" id="filesDir">–</span>
+                        <button class="chip-btn" id="filesOpenDir">Otevřít složku</button>
+                        <button class="chip-btn" id="filesChangeDir">Změnit složku</button>
+                    </div>
+                    <div class="file-grid" id="fileGrid"></div>
                 </section>
 
                 <!-- DEVICES -->
@@ -128,11 +150,15 @@
                             <label class="switch"><input type="checkbox" id="notificationsSwitch"><span></span></label>
                         </div>
                         <div class="group-row">
-                            <div>
-                                <div class="row-title">Přijaté soubory</div>
-                                <div class="muted mono small" id="receiveDir">–</div>
+                            <div style="min-width:0">
+                                <div class="row-title">Složka pro přijaté soubory</div>
+                                <div class="muted mono small path" id="receiveDir">–</div>
                             </div>
-                            <button class="chip-btn" id="openReceivedBtn">Otevřít složku</button>
+                            <div class="row-actions">
+                                <button class="chip-btn" id="openReceivedBtn">Otevřít</button>
+                                <button class="chip-btn" id="changeReceiveDirBtn">Změnit…</button>
+                                <button class="chip-btn" id="resetReceiveDirBtn" hidden>Výchozí</button>
+                            </div>
                         </div>
                     </div>
 
@@ -170,13 +196,19 @@
         </div>
     </div>
 
-    <!-- FULL-SIZE PREVIEW -->
+    <!-- IN-APP VIEWER -->
     <div class="lightbox" id="lightbox" hidden>
         <div class="lightbox-card">
             <div class="lightbox-head">
-                <span class="lightbox-title" id="lightboxTitle"></span>
-                <button class="tb-btn" id="lightboxCopy" title="Kopírovat"><span class="ico" data-icon="copy"></span></button>
-                <button class="tb-btn" id="lightboxClose" title="Zavřít"><span class="ico" data-icon="x"></span></button>
+                <button class="tb-btn" id="viewerBack" title="Zpět" hidden><span class="ico" data-icon="chevron-left"></span></button>
+                <div class="lightbox-titles">
+                    <div class="lightbox-title" id="lightboxTitle"></div>
+                    <div class="lightbox-sub" id="lightboxSub"></div>
+                </div>
+                <button class="chip-btn" id="viewerOpen" hidden><span class="ico" data-icon="open"></span>Otevřít</button>
+                <button class="tb-btn" id="viewerReveal" title="Zobrazit ve složce" hidden><span class="ico" data-icon="folder"></span></button>
+                <button class="tb-btn" id="lightboxCopy" title="Kopírovat do schránky"><span class="ico" data-icon="copy"></span></button>
+                <button class="tb-btn" id="lightboxClose" title="Zavřít (Esc)"><span class="ico" data-icon="x"></span></button>
             </div>
             <div class="lightbox-body" id="lightboxBody"></div>
         </div>
