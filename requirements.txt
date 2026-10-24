@@ -4,3 +4,4 @@ cryptography>=42.0.0
 pywebview>=6.2
 pystray>=0.19; sys_platform == 'win32'
 pywin32>=306; sys_platform == 'win32'
+pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'

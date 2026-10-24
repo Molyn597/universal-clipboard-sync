@@ -33,7 +33,12 @@ jobs:
           echo "APP_VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Install dependencies
-        run: uv pip install --system -r requirements.txt pyinstaller
+        run: uv pip install --system -r requirements.txt pyinstaller pytest
+
+      # Exercises the real NSPasteboard; the Windows clipboard is not reachable from the hosted runner session
+      - name: Clipboard round-trip tests
+        if: runner.os == 'macOS'
+        run: python -m pytest tests -v
 
       - name: Build macOS icon
         if: runner.os == 'macOS'

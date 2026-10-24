@@ -6,9 +6,7 @@ import struct
 import hashlib
 import base64
 import logging
-import tempfile
 import threading
-import subprocess
 import zipfile
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Callable
@@ -21,21 +19,24 @@ IS_MACOS = sys.platform == "darwin"
 
 MAX_FILE_SYNC_BYTES = 25 * 1024 * 1024  # base64 + Fernet roughly double this on the wire
 RECEIVE_DIR = Path.home() / "Downloads" / "Universal Clipboard"
-# pbcopy/pbpaste fall back to ASCII when launched outside a terminal, which mangles diacritics
-MAC_ENV = {**os.environ, "LANG": "en_US.UTF-8", "LC_ALL": "en_US.UTF-8"}
 
+win32clipboard = win32con = None
 if IS_WINDOWS:
     try:
         import win32clipboard
         import win32con
     except ImportError:
-        win32clipboard = None
-        win32con = None
+        pass
+
+AppKit = Foundation = None
+if IS_MACOS:
+    # Native NSPasteboard access (PyObjC ships with pywebview on macOS); far more reliable than osascript
+    import AppKit
+    import Foundation
 
 
-def _osascript(script: str, *args: str) -> str:
-    p = subprocess.run(["osascript", "-e", script, *args], capture_output=True, text=True, env=MAC_ENV)
-    return p.stdout.strip()
+def _mac_pasteboard():
+    return AppKit.NSPasteboard.generalPasteboard()
 
 
 def _walk_files(path: str) -> List[str]:
@@ -217,9 +218,7 @@ class ClipboardEngine:
             if IS_WINDOWS and win32clipboard:
                 return win32clipboard.GetClipboardSequenceNumber()
             if IS_MACOS:
-                out = _osascript('use framework "AppKit"\n'
-                                 "return (current application's NSPasteboard's generalPasteboard()'s changeCount()) as integer")
-                return int(out) if out else None
+                return int(_mac_pasteboard().changeCount())
         except Exception:
             pass
         return None
@@ -281,22 +280,12 @@ class ClipboardEngine:
                     pass
         elif IS_MACOS:
             try:
-                script = '''
-                use framework "AppKit"
-                set pb to current application's NSPasteboard's generalPasteboard()
-                set opts to current application's NSDictionary's dictionaryWithObject:true forKey:(current application's NSPasteboardURLReadingFileURLsOnlyKey)
-                set urls to pb's readObjectsForClasses:{current application's NSURL} options:opts
-                if urls is missing value then return ""
-                set out to {}
-                repeat with u in urls
-                    set end of out to ((u's |path|()) as text)
-                end repeat
-                set AppleScript's text item delimiters to linefeed
-                return out as text
-                '''
-                paths = [line for line in _osascript(script).splitlines() if line]
-            except Exception:
-                pass
+                urls = _mac_pasteboard().readObjectsForClasses_options_(
+                    [AppKit.NSURL], {AppKit.NSPasteboardURLReadingFileURLsOnlyKey: True}
+                )
+                paths = [str(u.path()) for u in (urls or [])]
+            except Exception as e:
+                logger.debug(f"NSPasteboard file read failed: {e}")
 
         paths = [p for p in paths if os.path.exists(p)]
         if not paths:
@@ -321,25 +310,10 @@ class ClipboardEngine:
                 pass
         elif IS_MACOS:
             try:
-                # Fast in-memory Cocoa NSPasteboard image read
-                script = '''
-                use framework "AppKit"
-                use framework "Foundation"
-                set pb to current application's NSPasteboard's generalPasteboard()
-                set imgData to pb's dataForType:(current application's NSPasteboardTypePNG)
-                if imgData is missing value then
-                    set imgData to pb's dataForType:(current application's NSPasteboardTypeTIFF)
-                end if
-                if imgData is not missing value then
-                    set b64 to imgData's base64EncodedStringWithOptions:0
-                    return b64 as text
-                end if
-                return ""
-                '''
-                b64_res = _osascript(script)
-                if b64_res:
-                    raw_bytes = base64.b64decode(b64_res)
-                    img = Image.open(io.BytesIO(raw_bytes))
+                pb = _mac_pasteboard()
+                data = pb.dataForType_(AppKit.NSPasteboardTypePNG) or pb.dataForType_(AppKit.NSPasteboardTypeTIFF)
+                if data:
+                    img = Image.open(io.BytesIO(bytes(data)))
                     buf = io.BytesIO()
                     img.save(buf, format="PNG")
                     png_bytes = buf.getvalue()
@@ -368,12 +342,8 @@ class ClipboardEngine:
                 except Exception:
                     pass
         elif IS_MACOS:
-            try:
-                p = subprocess.run(["pbpaste"], capture_output=True, text=True, encoding="utf-8", env=MAC_ENV)
-                if p.returncode == 0:
-                    return p.stdout
-            except Exception:
-                pass
+            text = _mac_pasteboard().stringForType_(AppKit.NSPasteboardTypeString)
+            return str(text) if text is not None else None
         return None
 
     # ----------------- WRITING CLIPBOARD -----------------
@@ -415,20 +385,10 @@ class ClipboardEngine:
                 except Exception:
                     pass
         elif IS_MACOS:
-            script = '''
-            use framework "AppKit"
-            on run argv
-                set urls to current application's NSMutableArray's new()
-                repeat with p in argv
-                    urls's addObject:(current application's NSURL's fileURLWithPath:(p as text))
-                end repeat
-                set pb to current application's NSPasteboard's generalPasteboard()
-                pb's clearContents()
-                return (pb's writeObjects:urls) as boolean
-            end run
-            '''
             try:
-                return _osascript(script, *paths) == "true"
+                pb = _mac_pasteboard()
+                pb.clearContents()
+                return bool(pb.writeObjects_([AppKit.NSURL.fileURLWithPath_(p) for p in paths]))
             except Exception as e:
                 logger.error(f"Failed to write files to Mac clipboard: {e}")
         return False
@@ -451,9 +411,9 @@ class ClipboardEngine:
                 return False
         elif IS_MACOS:
             try:
-                p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE, env=MAC_ENV)
-                p.communicate(text.encode("utf-8"))
-                return p.returncode == 0
+                pb = _mac_pasteboard()
+                pb.clearContents()
+                return bool(pb.setString_forType_(text, AppKit.NSPasteboardTypeString))
             except Exception as e:
                 logger.error(f"Failed to write text to Mac clipboard: {e}")
                 return False
@@ -479,24 +439,13 @@ class ClipboardEngine:
                 return True
 
             elif IS_MACOS:
-                # Passed via temp file: inlining base64 in the script hits the argv size limit on big screenshots
-                script = '''
-                use framework "AppKit"
-                on run argv
-                    set rawData to current application's NSData's dataWithContentsOfFile:(item 1 of argv)
-                    set theImage to current application's NSImage's alloc()'s initWithData:rawData
-                    set pb to current application's NSPasteboard's generalPasteboard()
-                    pb's clearContents()
-                    return (pb's writeObjects:{theImage}) as boolean
-                end run
-                '''
-                fd, tmp_path = tempfile.mkstemp(suffix=".png")
-                try:
-                    with os.fdopen(fd, "wb") as fh:
-                        fh.write(png_bytes)
-                    return _osascript(script, tmp_path) == "true"
-                finally:
-                    os.remove(tmp_path)
+                ns_data = Foundation.NSData.dataWithBytes_length_(png_bytes, len(png_bytes))
+                pb = _mac_pasteboard()
+                pb.clearContents()
+                # PNG for modern apps plus TIFF (via NSImage) for older ones that only read TIFF
+                image = AppKit.NSImage.alloc().initWithData_(ns_data)
+                ok = bool(pb.writeObjects_([image])) if image else False
+                return bool(pb.setData_forType_(ns_data, AppKit.NSPasteboardTypePNG)) or ok
 
         except Exception as e:
             logger.error(f"Failed to write image to clipboard: {e}")
