@@ -13,9 +13,10 @@
 }
 
 [data-theme="dark"] {
-    --bg: #0E0E11;
-    --surface: #18181C;
-    --card-in: #1F2024;
+    --bg: #0B0B0D;
+    --panel: #151518;
+    --surface: #1D1D21;
+    --card-in: #222227;
     --raised: #2A2A30;
     --hover: rgba(255, 255, 255, 0.06);
     --line: rgba(255, 255, 255, 0.08);
@@ -27,7 +28,8 @@
 }
 
 [data-theme="light"] {
-    --bg: #F2F2F5;
+    --bg: #E9E9EE;
+    --panel: #F6F6F9;
     --surface: #FFFFFF;
     --card-in: #FFFFFF;
     --raised: #E8E8ED;
@@ -55,7 +57,7 @@ body {
 
 /* macOS: the window is transparent and the app draws its own rounded corners */
 html.mac-frameless, html.mac-frameless body { background: transparent; }
-html.mac-frameless .app, html.mac-frameless .sheet { border-radius: 14px; }
+html.mac-frameless .shell { border-radius: 14px; }
 
 button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 input, textarea { font-family: inherit; color: inherit; }
@@ -67,23 +69,54 @@ input, textarea { font-family: inherit; color: inherit; }
 .mono { font-family: var(--mono); }
 .small { font-size: 0.72rem; }
 
-.app {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    overflow: hidden;
-}
+.shell { height: 100vh; display: flex; background: var(--bg); overflow: hidden; }
 
-/* ---------- TITLE BAR ---------- */
-.titlebar, .sheet-head {
-    display: flex; align-items: center; gap: 10px;
-    height: 48px; flex-shrink: 0;
-    padding: 0 8px 0 16px;
+/* ---------- SIDEBAR ---------- */
+.sidebar {
+    width: 92px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 0 16px;
     user-select: none;
 }
-.tb-logo { width: 22px; height: 22px; border-radius: 6px; }
-.tb-title { font-weight: 600; font-size: 0.9rem; }
+.sidebar-logo { width: 42px; height: 42px; border-radius: 12px; }
+.nav-items { display: flex; flex-direction: column; gap: 22px; margin: auto 0; }
+.nav-item {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    color: var(--text-3);
+    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    transition: color 0.15s;
+}
+.nav-item .ico { width: 22px; height: 22px; }
+.nav-item:hover { color: var(--text-2); }
+.nav-item.active { color: var(--text); }
+.nav-dot { position: absolute; top: -3px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
+.sidebar-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.side-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; color: var(--text-2);
+}
+.side-btn:hover { background: var(--hover); color: var(--text); }
+.side-btn.on { background: var(--rose); color: var(--on-pastel); }
+.version-link { font-size: 0.68rem; color: var(--text-3); }
+.version-link:hover { color: var(--text-2); }
+
+/* ---------- MAIN PANEL ---------- */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 10px 10px 0; }
+.panel { flex: 1; min-height: 0; background: var(--panel); border-radius: 22px; overflow: hidden; display: flex; }
+.view { display: none; flex: 1; min-width: 0; }
+.view.active { display: flex; flex-direction: column; }
+.view.page { overflow-y: auto; padding: 8px 28px 28px; }
+.view.page > * { width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; }
+
+/* ---------- TITLE BAR ---------- */
+.titlebar {
+    display: flex; align-items: center; gap: 10px;
+    height: 52px; flex-shrink: 0;
+    padding: 0 0 0 8px;
+    user-select: none;
+}
+.tb-title { font-weight: 600; font-size: 1.05rem; }
 .tb-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .tb-window { display: flex; gap: 2px; margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--line); }
 .tb-btn {
@@ -99,7 +132,7 @@ input, textarea { font-family: inherit; color: inherit; }
 
 /* ---------- CONNECTION BRIDGE ---------- */
 .bridge {
-    margin: 0 14px;
+    margin: 16px 20px 0;
     padding: 12px 14px;
     border-radius: 18px;
     background: var(--surface);
@@ -128,7 +161,7 @@ input, textarea { font-family: inherit; color: inherit; }
 .pair-btn { padding: 8px 14px; border-radius: 999px; background: var(--lavender); color: var(--on-pastel); font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
 
 /* ---------- TOOLBAR ---------- */
-.toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 14px 4px; }
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 20px 4px; }
 .segmented { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface); }
 .segmented button {
     display: inline-flex; align-items: center; gap: 5px;
@@ -145,13 +178,13 @@ input, textarea { font-family: inherit; color: inherit; }
 .search input { flex: 1; min-width: 0; background: none; border: none; outline: none; font-size: 0.8rem; color: var(--text); }
 
 /* ---------- TIMELINE ---------- */
-.timeline { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 16px; }
+.timeline { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 20px 16px; }
 .day { text-align: center; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin: 16px 0 6px; }
 
 .msg { display: flex; margin-top: 8px; }
 .msg.out { justify-content: flex-end; }
 .bubble {
-    width: min(78%, 420px);
+    width: min(70%, 560px);
     border-radius: 18px;
     overflow: hidden;
     background: var(--card-in);
@@ -227,7 +260,7 @@ input, textarea { font-family: inherit; color: inherit; }
 /* ---------- COMPOSER ---------- */
 .composer {
     display: flex; align-items: flex-end; gap: 8px;
-    margin: 0 14px 14px; padding: 8px;
+    margin: 0 20px 18px; padding: 8px;
     border-radius: 20px; background: var(--surface);
 }
 .composer textarea {
@@ -243,11 +276,8 @@ input, textarea { font-family: inherit; color: inherit; }
 .composer-btn.send { background: var(--periwinkle); color: var(--on-pastel); }
 .composer-btn.send:hover { filter: brightness(1.08); }
 
-/* ---------- SETTINGS SHEET ---------- */
-.sheet { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; animation: slide 0.18s ease; }
-@keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-.sheet-head { padding-left: 8px; }
-.sheet-body { flex: 1; overflow-y: auto; padding: 4px 14px 24px; }
+/* ---------- DEVICES & SETTINGS PAGES ---------- */
+.field-label { font-size: 0.74rem; color: var(--text-2); margin-bottom: 6px; }
 .group-title { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin: 18px 6px 8px; }
 .group { background: var(--surface); border-radius: 16px; overflow: hidden; margin-bottom: 10px; }
 .group-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; }

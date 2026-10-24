@@ -17,6 +17,9 @@ const ICON_PATHS = {
     open: '<path d="M12 6h-6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><path d="M11 13l9-9"/><path d="M15 4h5v5"/>',
     x: '<path d="M18 6l-12 12"/><path d="M6 6l12 12"/>',
     minus: '<path d="M5 12l14 0"/>',
+    square: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+    moon: '<path d="M12 3c.13 0 .26 0 .39 0a7.5 7.5 0 0 0 7.92 12.45a9 9 0 1 1-8.31-12.45z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M3 12h1m8-9v1m8 8h1m-9 8v1m-6.4-15.4l.7.7m12.1-.7l-.7.7m0 11.4l.7.7m-12.1-.7l-.7.7"/>',
     'chevron-left': '<path d="M15 6l-6 6l6 6"/>',
     paperclip: '<path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5-6.5a3 3 0 0 0-6-6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5-6.5"/>',
     windows: '<path d="M4 6l7-1v7h-7z"/><path d="M13 4.7l7-1.2v8.5h-7z"/><path d="M4 13h7v7l-7-1z"/><path d="M13 13h7v8.5l-7-1.2z"/>',
@@ -193,7 +196,10 @@ function renderBridge() {
             <button class="pair-btn" id="pairBtn">Spárovat</button>`;
     }
     $('bridge').innerHTML = html;
-    $('pairBtn')?.addEventListener('click', () => openSettings(true));
+    $('pairBtn')?.addEventListener('click', () => {
+        showView('devices');
+        setTimeout(() => $('newPairingKey').focus(), 50);
+    });
     $('resumeLink')?.addEventListener('click', () => saveSettings({ paused: false }));
 }
 
@@ -473,19 +479,20 @@ window.addEventListener('paste', (e) => {
 });
 
 // ==========================================
-// SETTINGS SHEET
+// NAVIGATION
 // ==========================================
-function openSettings(focusPairing = false) {
-    $('settingsSheet').hidden = false;
-    loadPairingKey();
-    api('/api/update').then(u => { state.update = u; renderUpdate(); }).catch(() => {});
-    if (focusPairing) setTimeout(() => $('newPairingKey').focus(), 50);
+const VIEW_TITLES = { clipboard: 'Schránka', devices: 'Zařízení', settings: 'Nastavení' };
+
+function showView(view) {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === view));
+    $('viewTitle').textContent = VIEW_TITLES[view];
+    if (view === 'devices') loadPairingKey();
+    else $('ownPairingKey').value = '';
 }
 
-function closeSettings() {
-    $('settingsSheet').hidden = true;
-    $('ownPairingKey').value = '';
-}
+document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+$('versionLink').addEventListener('click', () => showView('settings'));
 
 async function saveSettings(changes) {
     try {
@@ -513,6 +520,7 @@ function renderDevices() {
 function renderSettings() {
     const s = state.settings;
     document.documentElement.dataset.theme = s.theme;
+    $('themeBtn').innerHTML = icon(s.theme === 'dark' ? 'moon' : 'sun');
     document.querySelectorAll('#themeSelect button').forEach(b => b.classList.toggle('active', b.dataset.value === s.theme));
     $('pauseBtn').innerHTML = icon(s.paused ? 'play' : 'pause');
     $('pauseBtn').classList.toggle('on', s.paused);
@@ -528,6 +536,8 @@ function renderUpdate() {
     if (!u) return;
     const busy = u.state === 'downloading' || u.state === 'installing';
     $('updateBtn').hidden = !u.available;
+    $('updateDot').hidden = !u.available;
+    $('versionLink').textContent = `v${u.current}`;
     $('updateBtnText').textContent = busy ? `${Math.round(u.progress * 100)} %` : 'Aktualizovat';
     $('updateProgress').hidden = !busy;
     $('updateProgressBar').style.width = `${Math.round(u.progress * 100)}%`;
@@ -556,8 +566,7 @@ async function installUpdate() {
     }
 }
 
-$('settingsBtn').addEventListener('click', () => openSettings());
-$('sheetBack').addEventListener('click', closeSettings);
+$('themeBtn').addEventListener('click', () => saveSettings({ theme: state.settings.theme === 'dark' ? 'light' : 'dark' }));
 $('pauseBtn').addEventListener('click', () => saveSettings({ paused: !state.settings.paused }));
 $('pausedSwitch').addEventListener('change', (e) => saveSettings({ paused: e.target.checked }));
 $('notificationsSwitch').addEventListener('change', (e) => saveSettings({ notifications: e.target.checked }));
@@ -623,14 +632,13 @@ window.addEventListener('pywebviewready', () => {
     if (state.node?.system === 'Darwin') document.documentElement.classList.add('mac-frameless');
 });
 $('minimizeBtn').addEventListener('click', () => window.pywebview?.api.minimize());
+$('maximizeBtn').addEventListener('click', () => window.pywebview?.api.toggle_maximize());
 $('closeBtn').addEventListener('click', () => window.pywebview?.api.close());
-// Buttons sit inside the drag region; keep a click on them from starting a window drag
-document.querySelectorAll('.titlebar button, .sheet-head button').forEach(b => b.addEventListener('mousedown', (e) => e.stopPropagation()));
+// Buttons sit inside drag regions; keep a click on them from starting a window drag
+document.querySelectorAll('.titlebar button, .sidebar button').forEach(b => b.addEventListener('mousedown', (e) => e.stopPropagation()));
 
 document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (!$('lightbox').hidden) closeLightbox();
-    else if (!$('settingsSheet').hidden) closeSettings();
+    if (e.key === 'Escape' && !$('lightbox').hidden) closeLightbox();
 });
 
 // ==========================================

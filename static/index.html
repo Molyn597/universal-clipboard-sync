@@ -10,143 +10,165 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="app">
-        <!-- TITLE BAR (drag region for the frameless window) -->
-        <header class="titlebar pywebview-drag-region">
-            <img class="tb-logo" src="/static/logo.svg" alt="">
-            <span class="tb-title">Universal Clipboard</span>
-            <div class="tb-actions">
-                <button class="tb-btn update" id="updateBtn" hidden title="Je dostupná nová verze"><span class="ico" data-icon="download"></span><span id="updateBtnText">Aktualizovat</span></button>
-                <button class="tb-btn" id="pauseBtn" title="Pozastavit synchronizaci"><span class="ico" data-icon="pause"></span></button>
-                <button class="tb-btn" id="settingsBtn" title="Nastavení"><span class="ico" data-icon="settings"></span></button>
-                <span class="tb-window" id="windowControls" hidden>
-                    <button class="tb-btn" id="minimizeBtn" title="Minimalizovat"><span class="ico" data-icon="minus"></span></button>
-                    <button class="tb-btn close" id="closeBtn" title="Zavřít (běží dál na pozadí)"><span class="ico" data-icon="x"></span></button>
-                </span>
+    <div class="shell">
+        <!-- SIDEBAR -->
+        <nav class="sidebar pywebview-drag-region">
+            <img class="sidebar-logo" src="/static/logo.svg" alt="Universal Clipboard">
+            <div class="nav-items">
+                <button class="nav-item active" data-view="clipboard"><span class="ico" data-icon="clipboard"></span><span>Schránka</span></button>
+                <button class="nav-item" data-view="devices"><span class="ico" data-icon="devices"></span><span>Zařízení</span></button>
+                <button class="nav-item" data-view="settings"><span class="ico" data-icon="settings"></span><span>Nastavení</span><i class="nav-dot" id="updateDot" hidden></i></button>
             </div>
-        </header>
-
-        <!-- CONNECTION BRIDGE -->
-        <section class="bridge" id="bridge"></section>
-
-        <!-- FILTERS -->
-        <div class="toolbar">
-            <div class="segmented" id="dirFilter">
-                <button class="active" data-value="all">Vše</button>
-                <button data-value="received"><span class="ico" data-icon="arrow-down"></span>Přijato</button>
-                <button data-value="sent"><span class="ico" data-icon="arrow-up"></span>Odesláno</button>
-                <button data-value="pinned"><span class="ico" data-icon="pin"></span></button>
+            <div class="sidebar-bottom">
+                <button class="side-btn" id="pauseBtn" title="Pozastavit synchronizaci"><span class="ico" data-icon="pause"></span></button>
+                <button class="side-btn" id="themeBtn" title="Přepnout vzhled"><span class="ico" data-icon="moon"></span></button>
+                <button class="version-link" id="versionLink">v–</button>
             </div>
-            <label class="search" id="searchBox">
-                <span class="ico" data-icon="search"></span>
-                <input id="searchInput" type="search" placeholder="Hledat" autocomplete="off" spellcheck="false">
-            </label>
+        </nav>
+
+        <div class="main">
+            <!-- TITLE BAR (drag region for the frameless window) -->
+            <header class="titlebar pywebview-drag-region">
+                <span class="tb-title" id="viewTitle">Schránka</span>
+                <div class="tb-actions">
+                    <button class="tb-btn update" id="updateBtn" hidden title="Je dostupná nová verze"><span class="ico" data-icon="download"></span><span id="updateBtnText">Aktualizovat</span></button>
+                    <span class="tb-window" id="windowControls" hidden>
+                        <button class="tb-btn" id="minimizeBtn" title="Minimalizovat"><span class="ico" data-icon="minus"></span></button>
+                        <button class="tb-btn" id="maximizeBtn" title="Maximalizovat"><span class="ico" data-icon="square"></span></button>
+                        <button class="tb-btn close" id="closeBtn" title="Zavřít (běží dál na pozadí)"><span class="ico" data-icon="x"></span></button>
+                    </span>
+                </div>
+            </header>
+
+            <main class="panel">
+                <!-- CLIPBOARD (conversation) -->
+                <section class="view active" data-view="clipboard">
+                    <div class="bridge" id="bridge"></div>
+                    <div class="toolbar">
+                        <div class="segmented" id="dirFilter">
+                            <button class="active" data-value="all">Vše</button>
+                            <button data-value="received"><span class="ico" data-icon="arrow-down"></span>Přijato</button>
+                            <button data-value="sent"><span class="ico" data-icon="arrow-up"></span>Odesláno</button>
+                            <button data-value="pinned"><span class="ico" data-icon="pin"></span>Připnuté</button>
+                        </div>
+                        <label class="search">
+                            <span class="ico" data-icon="search"></span>
+                            <input id="searchInput" type="search" placeholder="Hledat v historii" autocomplete="off" spellcheck="false">
+                        </label>
+                    </div>
+                    <div class="timeline" id="timeline"></div>
+                    <footer class="composer">
+                        <button class="composer-btn" id="attachBtn" title="Odeslat soubory"><span class="ico" data-icon="paperclip"></span></button>
+                        <textarea id="composeText" rows="1" placeholder="Napiš text nebo přetáhni soubory…" spellcheck="false"></textarea>
+                        <button class="composer-btn send" id="sendBtn" title="Odeslat (Enter)"><span class="ico" data-icon="arrow-up"></span></button>
+                        <input type="file" id="fileInput" multiple hidden>
+                    </footer>
+                </section>
+
+                <!-- DEVICES -->
+                <section class="view page" data-view="devices">
+                    <div class="group-title">Zařízení</div>
+                    <div class="group" id="deviceList"></div>
+
+                    <div class="group-title">Párování</div>
+                    <div class="group">
+                        <div class="group-row column">
+                            <div class="muted">Na obou zařízeních musí být stejný kód a stejná Wi-Fi. Zkopíruj kód tady a vlož ho na druhém zařízení.</div>
+                            <div>
+                                <div class="field-label">Kód tohoto zařízení</div>
+                                <div class="field-row">
+                                    <input type="password" id="ownPairingKey" class="field mono" readonly>
+                                    <button class="chip-btn" id="togglePairingKey">Zobrazit</button>
+                                    <button class="chip-btn" id="copyPairingKey">Kopírovat</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="field-label">Kód z druhého zařízení</div>
+                                <div class="field-row">
+                                    <input type="text" id="newPairingKey" class="field mono" placeholder="Vlož párovací kód" spellcheck="false" autocomplete="off">
+                                    <button class="chip-btn accent" id="applyPairingKey">Spárovat</button>
+                                </div>
+                            </div>
+                            <div class="muted warn">Kód nikomu neposílej – kdo ho má, může číst tvou schránku.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SETTINGS -->
+                <section class="view page" data-view="settings">
+                    <div class="group-title">Aktualizace</div>
+                    <div class="group">
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title" id="updateStatusText">–</div>
+                                <div class="muted">Aplikace kontroluje nové verze sama při spuštění a každých 6 hodin.</div>
+                                <div class="progress" id="updateProgress" hidden><div id="updateProgressBar"></div></div>
+                            </div>
+                            <div class="row-actions">
+                                <button class="chip-btn" id="checkUpdateBtn">Zkontrolovat</button>
+                                <button class="chip-btn accent" id="installUpdateBtn" hidden>Aktualizovat</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group-title">Synchronizace</div>
+                    <div class="group">
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title">Pozastavit synchronizaci</div>
+                                <div class="muted">Nic se neodesílá ani nepřijímá – třeba když kopíruješ hesla.</div>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="pausedSwitch"><span></span></label>
+                        </div>
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title">Oznámení</div>
+                                <div class="muted">Systémové upozornění, když něco přijde z jiného zařízení.</div>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="notificationsSwitch"><span></span></label>
+                        </div>
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title">Přijaté soubory</div>
+                                <div class="muted mono small" id="receiveDir">–</div>
+                            </div>
+                            <button class="chip-btn" id="openReceivedBtn">Otevřít složku</button>
+                        </div>
+                    </div>
+
+                    <div class="group-title">Vzhled</div>
+                    <div class="group">
+                        <div class="group-row">
+                            <div class="row-title">Motiv</div>
+                            <div class="segmented small" id="themeSelect">
+                                <button data-value="dark">Tmavý</button>
+                                <button data-value="light">Světlý</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group-title">Historie a aplikace</div>
+                    <div class="group">
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title">Vymazat historii</div>
+                                <div class="muted">Připnuté položky zůstanou.</div>
+                            </div>
+                            <button class="chip-btn danger" id="clearHistoryBtn">Vymazat</button>
+                        </div>
+                        <div class="group-row">
+                            <div>
+                                <div class="row-title">Ukončit aplikaci</div>
+                                <div class="muted">Synchronizace se zastaví, dokud aplikaci znovu nespustíš.</div>
+                            </div>
+                            <button class="chip-btn danger" id="shutdownBtn">Ukončit</button>
+                        </div>
+                    </div>
+                    <div class="version" id="versionText">–</div>
+                </section>
+            </main>
         </div>
-
-        <!-- TIMELINE -->
-        <main class="timeline" id="timeline"></main>
-
-        <!-- COMPOSER -->
-        <footer class="composer">
-            <button class="composer-btn" id="attachBtn" title="Odeslat soubory"><span class="ico" data-icon="paperclip"></span></button>
-            <textarea id="composeText" rows="1" placeholder="Napiš text nebo přetáhni soubory…" spellcheck="false"></textarea>
-            <button class="composer-btn send" id="sendBtn" title="Odeslat (Enter)"><span class="ico" data-icon="arrow-up"></span></button>
-            <input type="file" id="fileInput" multiple hidden>
-        </footer>
     </div>
-
-    <!-- SETTINGS SHEET -->
-    <aside class="sheet" id="settingsSheet" hidden>
-        <header class="sheet-head pywebview-drag-region">
-            <button class="tb-btn" id="sheetBack" title="Zpět"><span class="ico" data-icon="chevron-left"></span></button>
-            <span class="tb-title">Nastavení</span>
-        </header>
-        <div class="sheet-body">
-            <div class="group-title" id="pairingSection">Zařízení</div>
-            <div class="group" id="deviceList"></div>
-            <div class="group">
-                <div class="group-row column">
-                    <div class="row-title">Spárovat další zařízení</div>
-                    <div class="muted">Na obou zařízeních musí být stejný kód a stejná Wi-Fi. Zkopíruj kód tady a vlož ho na druhém zařízení.</div>
-                    <div class="field-row">
-                        <input type="password" id="ownPairingKey" class="field mono" readonly>
-                        <button class="chip-btn" id="togglePairingKey">Zobrazit</button>
-                        <button class="chip-btn" id="copyPairingKey">Kopírovat</button>
-                    </div>
-                    <div class="field-row">
-                        <input type="text" id="newPairingKey" class="field mono" placeholder="Vlož kód z druhého zařízení" spellcheck="false" autocomplete="off">
-                        <button class="chip-btn accent" id="applyPairingKey">Spárovat</button>
-                    </div>
-                    <div class="muted warn">Kód nikomu neposílej – kdo ho má, může číst tvou schránku.</div>
-                </div>
-            </div>
-
-            <div class="group-title">Aplikace</div>
-            <div class="group">
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Aktualizace</div>
-                        <div class="muted" id="updateStatusText">–</div>
-                        <div class="progress" id="updateProgress" hidden><div id="updateProgressBar"></div></div>
-                    </div>
-                    <div class="row-actions">
-                        <button class="chip-btn" id="checkUpdateBtn">Zkontrolovat</button>
-                        <button class="chip-btn accent" id="installUpdateBtn" hidden>Aktualizovat</button>
-                    </div>
-                </div>
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Pozastavit synchronizaci</div>
-                        <div class="muted">Nic se neodesílá ani nepřijímá.</div>
-                    </div>
-                    <label class="switch"><input type="checkbox" id="pausedSwitch"><span></span></label>
-                </div>
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Oznámení</div>
-                        <div class="muted">Upozornit, když něco přijde.</div>
-                    </div>
-                    <label class="switch"><input type="checkbox" id="notificationsSwitch"><span></span></label>
-                </div>
-                <div class="group-row">
-                    <div class="row-title">Vzhled</div>
-                    <div class="segmented small" id="themeSelect">
-                        <button data-value="dark">Tmavý</button>
-                        <button data-value="light">Světlý</button>
-                    </div>
-                </div>
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Přijaté soubory</div>
-                        <div class="muted mono small" id="receiveDir">–</div>
-                    </div>
-                    <button class="chip-btn" id="openReceivedBtn">Otevřít</button>
-                </div>
-            </div>
-
-            <div class="group-title">Historie</div>
-            <div class="group">
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Vymazat historii</div>
-                        <div class="muted">Připnuté položky zůstanou.</div>
-                    </div>
-                    <button class="chip-btn danger" id="clearHistoryBtn">Vymazat</button>
-                </div>
-            </div>
-
-            <div class="group">
-                <div class="group-row">
-                    <div>
-                        <div class="row-title">Ukončit aplikaci</div>
-                        <div class="muted">Synchronizace se zastaví.</div>
-                    </div>
-                    <button class="chip-btn danger" id="shutdownBtn">Ukončit</button>
-                </div>
-            </div>
-            <div class="version" id="versionText">–</div>
-        </div>
-    </aside>
 
     <!-- FULL-SIZE PREVIEW -->
     <div class="lightbox" id="lightbox" hidden>

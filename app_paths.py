@@ -12,6 +12,9 @@ RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", SOURCE_DIR))
 
 
 def _data_dir() -> Path:
+    # Lets a development or preview instance keep its history and settings apart from the installed app
+    if override := os.environ.get("UNIVERSAL_CLIPBOARD_DATA_DIR"):
+        return Path(override)
     if sys.platform == "win32":
         base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
     elif sys.platform == "darwin":

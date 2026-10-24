@@ -85,9 +85,14 @@ class WindowApi:
 
     def __init__(self):
         self._window = None  # private: pywebview exposes public attributes to the page
+        self._maximized = False
 
     def minimize(self):
         self._window.minimize()
+
+    def toggle_maximize(self):
+        self._window.restore() if self._maximized else self._window.maximize()
+        self._maximized = not self._maximized
 
     def close(self):
         _hide_to_background(self._window)
@@ -105,7 +110,7 @@ def main():
 
     api = WindowApi()
     window = webview.create_window(
-        APP_NAME, APP_URL, width=540, height=840, min_size=(440, 600),
+        APP_NAME, APP_URL, width=1180, height=820, min_size=(820, 600),
         hidden="--hidden" in sys.argv,  # autostart at login goes straight to the tray
         frameless=True, easy_drag=False,  # the page draws its own title bar with a drag region
         transparent=sys.platform == "darwin",  # macOS corners are rounded by the page itself
