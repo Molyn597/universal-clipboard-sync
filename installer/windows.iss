@@ -27,6 +27,8 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=force
 RestartApplications=no
+; Makes Explorer drop cached icons after install, so a changed app icon shows up right away
+ChangesAssociations=yes
 
 [Languages]
 Name: "czech"; MessagesFile: "compiler:Languages\Czech.isl"
@@ -43,8 +45,10 @@ Type: filesandordirs; Name: "{app}\_internal"
 Source: "..\dist\{#AppName}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+; Icon from the bundled .ico rather than the exe: Explorer caches icons per file path, and the exe path
+; never changes between versions, so a new icon inside the exe would keep showing the old cached one
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; IconFilename: "{app}\_internal\assets\icon.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; IconFilename: "{app}\_internal\assets\icon.ico"; Tasks: desktopicon
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#AppName}"; ValueData: """{app}\{#AppExe}"" --hidden"; Flags: uninsdeletevalue; Tasks: autostart
