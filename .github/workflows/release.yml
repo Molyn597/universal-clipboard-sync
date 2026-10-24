@@ -45,8 +45,8 @@ jobs:
         run: |
           mkdir -p build/icon.iconset
           for size in 16 32 128 256 512; do
-            sips -z $size $size assets/icon.png --out build/icon.iconset/icon_${size}x${size}.png
-            sips -z $((size*2)) $((size*2)) assets/icon.png --out build/icon.iconset/icon_${size}x${size}@2x.png
+            sips -z $size $size assets/icon_mac.png --out build/icon.iconset/icon_${size}x${size}.png
+            sips -z $((size*2)) $((size*2)) assets/icon_mac.png --out build/icon.iconset/icon_${size}x${size}@2x.png
           done
           iconutil -c icns build/icon.iconset -o build/icon.icns
 
@@ -112,7 +112,7 @@ jobs:
           ```
 
           ## Párování
-          Na prvním zařízení klikni na **Párování → Kopírovat**, na druhém kód vlož do **Vložit kód z jiného zařízení → Spárovat**. Obě zařízení musí být na stejné Wi-Fi.
+          Na prvním zařízení otevři **Zařízení → Kopírovat**, na druhém kód vlož do **Kód z jiného zařízení → Spárovat**. Obě zařízení musí být na stejné Wi-Fi.
 
           ## Aktualizace
           Nainstalovaná aplikace sama hlídá nové verze a nabídne tlačítko **Aktualizovat**.
