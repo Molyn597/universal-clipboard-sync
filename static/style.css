@@ -782,6 +782,12 @@ kbd {
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.type-pill.too-large {
+    background: rgba(239, 68, 68, 0.18);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 .history-file-list {
     list-style: none;
     margin: 0;

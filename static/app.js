@@ -89,8 +89,10 @@ function handleWsEvent(data) {
         if (historyItems.length > 50) historyItems.pop();
         renderHistory();
         if (data.from_remote) {
-            const kind = item.type === 'text' ? 'text' : (item.type === 'file' ? 'seznam souborů' : 'obrázek');
+            const kind = item.type === 'text' ? 'text' : (item.type === 'file' ? 'soubory (uloženo do Stažené/Universal Clipboard)' : 'obrázek');
             showToast(`Příchozí ${kind} z druhého zařízení synchronizován!`, 'success');
+        } else if (item.metadata?.too_large) {
+            showToast(`Soubory jsou větší než 25 MB, na druhé zařízení se neposílají.`, 'error');
         }
     }
 }
@@ -196,6 +198,7 @@ function renderHistory() {
                     <div class="history-card-top">
                         <div class="history-meta-tags">
                             <span class="type-pill file">Soubory (${files.length})</span>
+                            ${item.metadata?.too_large ? '<span class="type-pill too-large">Nad 25 MB, neodesláno</span>' : ''}
                             <span class="time-stamp">${timeStr}</span>
                         </div>
                         <button class="copy-action-btn" onclick="copyTextItem('${item.hash}', this)">

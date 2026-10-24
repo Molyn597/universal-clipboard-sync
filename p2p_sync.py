@@ -11,7 +11,7 @@ import platform
 import logging
 import aiohttp
 from cryptography.fernet import Fernet, InvalidToken
-from typing import Dict, List, Callable, Optional, Set
+from typing import Dict, List, Callable, Optional
 
 logger = logging.getLogger("P2PSync")
 
@@ -19,6 +19,7 @@ DISCOVERY_PORT = 45678
 BROADCAST_INTERVAL = 2.0
 PEER_TIMEOUT = 8.0
 MESSAGE_TTL = 120  # seconds; sealed messages older than this are rejected (replay protection)
+SYNC_TIMEOUT = aiohttp.ClientTimeout(total=90.0)  # file payloads need far longer than the 3s ping timeout, but under MESSAGE_TTL
 KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync.key")
 
 
@@ -139,7 +140,6 @@ class P2PManager:
         return json.loads(self._fernet.decrypt(token, ttl=MESSAGE_TTL))
 
     def handle_peer_beacon(self, node_id: str, name: str, host: str, port: int, system: str):
-        is_new = node_id not in self.peers
         peer = self.peers.get(node_id)
         if not peer:
             peer = PeerNode(node_id, name, host, port, system)
@@ -268,7 +268,7 @@ class P2PManager:
             return
         target_url = f"{peer.url}/api/sync"
         try:
-            async with self._session.post(target_url, data=self.seal(payload)) as resp:
+            async with self._session.post(target_url, data=self.seal(payload), timeout=SYNC_TIMEOUT) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully synced item {payload.get('hash', '')[:8]} to {peer.name}")
                 else:

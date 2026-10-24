@@ -3,14 +3,13 @@ import os
 import io
 import json
 import base64
-import time
 import asyncio
 import logging
 from aiohttp import web
 from cryptography.fernet import InvalidToken
 from PIL import Image
 
-from clipboard_engine import ClipboardEngine, ClipboardItem
+from clipboard_engine import ClipboardEngine, ClipboardItem, file_item_from_paths, pack_files, unpack_files
 from p2p_sync import P2PManager
 try:
     from tray_icon import setup_tray
@@ -34,7 +33,7 @@ class ClipboardServer:
     def __init__(self, port: int = DEFAULT_PORT):
         self.port = port
         self.app = web.Application(
-            client_max_size=50 * 1024 * 1024,  # 50MB max for big screenshots/images
+            client_max_size=64 * 1024 * 1024,  # fits a 25MB file after base64 + Fernet overhead
             middlewares=[self._access_guard],
         )
         self.engine = ClipboardEngine()
@@ -143,11 +142,16 @@ class ClipboardServer:
 
         if from_remote:
             logger.info(f"Writing incoming {item.item_type} to local clipboard...")
-            self.engine.write_local_clipboard(item)
+            await asyncio.to_thread(self.engine.write_local_clipboard, item)
+        elif item.metadata.get("too_large"):
+            logger.warning(f"Copied files exceed the sync limit ({item.metadata.get('size_bytes', 0)} bytes), not sending.")
         else:
-            # Broadcast to peers across Wi-Fi
             logger.info(f"Broadcasting local {item.item_type} to LAN peers...")
-            asyncio.create_task(self.p2p.broadcast_to_peers(item_dict))
+            payload = item_dict
+            if item.item_type == "file":
+                # Contents ride outside metadata so they never land in history or WebSocket events
+                payload = {**item_dict, "packed": await asyncio.to_thread(pack_files, item.data.splitlines())}
+            asyncio.create_task(self.p2p.broadcast_to_peers(payload))
 
         # Notify local UI Dashboard
         await self.broadcast_ws({"event": "clipboard_item", "item": item_dict, "from_remote": from_remote})
@@ -184,6 +188,12 @@ class ClipboardServer:
             item = ClipboardItem.from_dict(data)
             if not self.engine.is_hash_seen(item.hash):
                 self.engine.mark_hash_seen(item.hash)
+                if item.item_type == "file":
+                    if not data.get("packed"):
+                        return web.json_response({"status": "error", "message": "File contents missing"}, status=400)
+                    saved = await asyncio.to_thread(unpack_files, data["packed"])
+                    logger.info(f"Saved {len(saved)} incoming file(s) to {os.path.dirname(saved[0])}")
+                    item = file_item_from_paths(saved, item_hash=item.hash)
                 await self.process_and_broadcast_item(item, from_remote=True)
                 return web.json_response({"status": "ok", "hash": item.hash})
             else:
@@ -273,7 +283,7 @@ class ClipboardServer:
         """Periodically polls OS clipboard for new items."""
         while True:
             try:
-                item = self.engine.poll_clipboard()
+                item = await asyncio.to_thread(self.engine.poll_clipboard)
                 if item:
                     logger.info(f"Detected new local clipboard item: {item.item_type} (hash: {item.hash[:8]})")
                     await self.process_and_broadcast_item(item, from_remote=False)
@@ -291,7 +301,7 @@ async def start_server(port: int = DEFAULT_PORT):
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    logger.info(f"✨ Universal Clipboard Sync running!")
+    logger.info("✨ Universal Clipboard Sync running!")
     logger.info(f"📊 Dashboard UI: http://localhost:{port}")
     logger.info(f"💻 Device: {server.p2p.hostname} ({server.p2p.system})")
 
